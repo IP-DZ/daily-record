@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`（用户已于 2026-07-13 确认）
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
-- **Resume Point**：用户已批准隔离工作区与当前主控模型；从任务 1 开始，任务状态只在本文维护
+- **Resume Point**：任务 1 已通过整分支 Anvil 终审并纳入首个保护性提交；下一步从任务 2 开始
 
 ## 交付拆分
 
@@ -241,11 +241,16 @@ graph TD
 ## 任务列表
 
 ### 任务 1：基础设施、营养计算与首次设置
+- **Code Status**：done（详细执行计划 Task 1–5、整分支终审修复与复核均完成，并纳入首个保护性提交）
+- **Actual Write Set**：`package.json`、`pnpm-lock.yaml`、`tsconfig*.json`、`vite.config.ts`、`eslint.config.js`、`index.html`、`src/main.tsx`、`src/app/**`、`src/test/setup.ts`、`src/domain/nutrition/**`、`src/features/onboarding/**`、`src/platform/settings/**`、`src/platform/storage/**`、`public/**`、`playwright.config.ts`、`tests/e2e/**`、`docs/operations/**`、需求/计划状态文档
+- **Verification**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e -- --project=mobile-chromium`
+- **Evidence**：终审修复后 lint、typecheck、74 个 Vitest 测试、PWA build、`git diff --check` 与 1 个 `mobile-chromium` E2E 全部通过；批准结论见 `.ai/anvil/reviews/2026-07-13-onboarding-foundation-review.md`
+- **PWA 验收状态**：partial；已有 artifact、unit 与移动流程证据，真实 Service Worker、离线、安装和更新生命周期验收仍归任务 9
 - **Layer**：1
 - **Parallel Group**：G1
 - **Execution**：serial
 - **Parallel Blocker**：共享配置、路由、领域类型和全局测试设施
-- **Ownership**：`package.json`、构建配置、`src/app/**`、`src/domain/nutrition/**`、`src/features/onboarding/**`、`tests/e2e/onboarding.spec.ts`
+- **Ownership**：`package.json`、构建配置、`src/app/**`、`src/domain/nutrition/**`、`src/features/onboarding/**`、`src/platform/settings/**`、`tests/e2e/onboarding.spec.ts`
 - **Read Set**：需求规格、设计快照、`AGENTS.md`
 - **Write Set**：同 Ownership
 - **描述**：建立 React/TypeScript/Vite PWA 基座，以 TDD 完成公式、校验、首次设置与可编辑目标预览。
@@ -395,4 +400,17 @@ graph TD
 - [x] 定义构建、测试、E2E、权限、性能和人工 smoke 证据。
 - [x] `AGENTS.md` 已存在且包含当前 Anvil 规则。
 - [x] 本文是唯一任务状态来源，并提供明确恢复点。
-- [x] 用户已批准本计划，`Status` 已改为 `confirmed`，准备进入 `/anvil:code`。
+- [x] 用户已批准本计划；执行开始后 `Status` 已改为 `active`。
+
+### Code Stage 门禁状态
+
+| 门禁 | Code Status | 证据 |
+|---|---|---|
+| 自动化测试 | passed | 74 个 Vitest 测试与修复后 1 个 `mobile-chromium` E2E 通过 |
+| 类型与静态检查 | passed | `pnpm lint`、`pnpm typecheck`、`git diff --check` 退出码 0 |
+| PWA 构建 | passed | `pnpm build` 生成 Manifest、Service Worker 与 Workbox；precache 12 entries |
+| 性能预算 | passed | 入口 JavaScript gzip 94.28 kB，低于 250 KB |
+| 敏感信息与缓存边界 | passed | 密钥模式扫描无命中；未配置 API/图片 runtime caching |
+| 任务级独立审查 | passed | 五个详细任务均为 Spec PASS / Quality APPROVED |
+| 整分支 Anvil 评审 | passed | `.ai/anvil/reviews/2026-07-13-onboarding-foundation-review.md` 已批准，无未解决发现项 |
+| 后续业务任务 | partial | 任务 2–9 仍待执行，当前恢复点为任务 2 |

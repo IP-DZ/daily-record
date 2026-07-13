@@ -209,7 +209,7 @@ it('calculates the accepted male example without rounding internal values', () =
   expect(result.caloriesKcal).toBeCloseTo(2811.11875, 5);
   expect(result.proteinGrams).toBeCloseTo(112, 5);
   expect(result.fatGrams).toBeCloseTo(78.0866, 3);
-  expect(result.carbsGrams).toBeCloseTo(415.8348, 3);
+  expect(result.carbsGrams).toBeCloseTo(415.0848, 3);
 });
 
 it('uses the female Mifflin constant', () => {
@@ -300,14 +300,16 @@ export interface OnboardingDraft {
   savedAt: string;
 }
 
+export type OnboardingDraftInput = Omit<OnboardingDraft, 'savedAt'>;
+
 export interface SettingsRepository {
-  saveDraft(draft: OnboardingDraft): Promise<void>;
+  saveDraft(draft: OnboardingDraftInput): Promise<void>;
   loadDraft(): Promise<OnboardingDraft | null>;
   clearDraft(): Promise<void>;
 }
 ```
 
-测试要求：保存后可加载；损坏 JSON 返回 `null` 并清除；`clearDraft` 后为空；显式传入时钟，使 `savedAt` 可预测。
+测试要求：保存后由仓库使用注入时钟补充 `savedAt` 并可加载；损坏 JSON 返回 `null` 并清除；`clearDraft` 后为空；显式传入时钟，使 `savedAt` 可预测。
 
 - [ ] **Step 2: 运行测试确认失败**
 
@@ -376,7 +378,7 @@ Expected: FAIL，原因是页面尚不存在。
 
 - [ ] **Step 3: 实现最小表单**
 
-使用受控表单；默认 `proteinGramsPerKg = 1.6`、`fatCalorieRatio = 0.25`、`surplusRatio = 0.1`。点击计算时先 `safeParse`，错误逐字段显示并关联 `aria-describedby`；成功后保存内部小数结果，预览只使用 `Math.round`。页面必须包含特殊情况提示和“改用手动设置”入口，但本切片不实现云端保存。
+使用字符串状态保存表单值，避免把空字符串转换为 `0`；默认 `proteinGramsPerKg = 1.6`、`fatCalorieRatio = 0.25`、`surplusRatio = 0.1`，其他字段初始为空。页面加载时调用 `repository.loadDraft()` 恢复已有 inputs 与 targets，并对加载/保存失败显示可恢复错误。点击计算时先 `safeParse`，错误逐字段显示并关联 `aria-describedby`；成功后保存内部小数结果，预览只使用 `Math.round`。页面必须包含特殊情况提示和可操作的“改用手动设置”入口；点击后显示手动设置说明，本切片不实现云端保存或最终手动目标提交。
 
 - [ ] **Step 4: 接入路由和移动样式**
 
@@ -386,7 +388,7 @@ Expected: FAIL，原因是页面尚不存在。
 <Route path="/onboarding" element={<OnboardingPage repository={settingsRepository} />} />
 ```
 
-表单单列布局；数字输入使用 `inputMode="decimal"`；主按钮固定至少 48px 高；进度和营养值不能只依赖颜色表达。
+在应用组合根通过 `safeLocalStorage()` 创建 `BrowserDraftSettingsRepository`；存储不可用时显示可恢复提示，禁止使用非空断言。表单单列布局；数字输入使用 `inputMode="decimal"`；主按钮固定至少 48px 高；进度和营养值不能只依赖颜色表达。
 
 - [ ] **Step 5: 运行组件回归并提交**
 
@@ -404,7 +406,13 @@ git commit -m "feat: add nutrition onboarding"
 ### Task 5: 配置 PWA、移动端 E2E 和切片验收
 
 **Files:**
+- Modify: `package.json`
+- Modify: `pnpm-lock.yaml`
 - Modify: `vite.config.ts`
+- Modify: `src/app/App.tsx`
+- Create: `src/app/PwaUpdatePrompt.tsx`
+- Create: `src/app/PwaUpdatePrompt.test.tsx`
+- Create: `public/icons/icon.svg`
 - Create: `public/icons/icon-192.png`
 - Create: `public/icons/icon-512.png`
 - Create: `public/robots.txt`
@@ -419,7 +427,7 @@ git commit -m "feat: add nutrition onboarding"
 - [ ] **Step 1: 写移动端 E2E**
 
 ```ts
-import { expect, test } from '@playwright/test';
+import { expect, test } from 'playwright/test';
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -445,7 +453,7 @@ Expected: 首次执行至少因缺少 Playwright 配置或应用服务器而 FAI
 
 - [ ] **Step 3: 配置 Playwright 和 PWA**
 
-`playwright.config.ts` 使用 `baseURL: 'http://127.0.0.1:4173'`，`webServer.command: 'pnpm build && pnpm exec vite preview --host 127.0.0.1'`，失败保留 screenshot/trace。`VitePWA` 配置：
+`playwright.config.ts` 从 `playwright/test` 导入，声明项目名 `mobile-chromium`，使用 `baseURL: 'http://127.0.0.1:4173'`，`webServer.command: 'pnpm build && pnpm exec vite preview --host 127.0.0.1 --port 4173 --strictPort'`，失败保留 screenshot/trace。`VitePWA` 配置：
 
 ```ts
 VitePWA({
@@ -459,14 +467,16 @@ VitePWA({
     display: 'standalone',
     start_url: '/',
     icons: [
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
     ],
   },
 })
 ```
 
 Service Worker 只缓存静态外壳；不得缓存验证码、用户 API 响应或未来的私有图片。
+
+使用 `virtual:pwa-register/react` 实现可见的更新提示组件：发现新版本时显示“发现新版本”与“立即更新”按钮，用户点击后调用 `updateServiceWorker(true)`；离线就绪提示可关闭。不得静默自动刷新正在填写的表单。
 
 - [ ] **Step 4: 运行完整切片验证**
 
@@ -477,10 +487,10 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm test:e2e -- --project=chromium
+pnpm test:e2e -- --project=mobile-chromium
 ```
 
-Expected: 全部退出码 0；`dist/manifest.webmanifest` 与 Service Worker 文件存在；390×844 E2E PASS。
+Expected: 全部退出码 0；`dist/manifest.webmanifest` 与 Service Worker 文件存在；390×844 E2E PASS；PWA 更新提示组件测试 PASS。
 
 - [ ] **Step 5: 检查包体和敏感信息**
 
@@ -488,10 +498,12 @@ Run:
 
 ```bash
 du -sh dist
+find dist/assets -name '*.js' -exec gzip -c {} \; | wc -c
+sips -g pixelWidth -g pixelHeight public/icons/icon-192.png public/icons/icon-512.png
 rg -n "SECRET|PRIVATE_KEY|API_KEY|sk-" dist src || true
 ```
 
-Expected: `dist` 可解释且初始压缩 JS ≤ 250 KB；敏感信息扫描没有真实密钥命中。
+Expected: 入口 JavaScript gzip 合计 ≤ 250 KB；两个 PNG 分别为 192×192 和 512×512；敏感信息扫描没有真实密钥命中。
 
 - [ ] **Step 6: 提交并更新主计划恢复点**
 
