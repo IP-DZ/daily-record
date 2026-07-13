@@ -2,11 +2,11 @@
 
 ## 执行元数据
 
-- **Status**：draft
+- **Status**：confirmed
 - **Workflow Stage**：req
 - **Created**：2026-07-13
 - **Updated**：2026-07-13
-- **Source Of Truth Until**：用户书面复核并确认本需求，随后由 `/anvil:plan` 取代
+- **Source Of Truth Until**：`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md` 获用户批准并成为实施来源
 - **Requirements Source**：用户初始描述、逐项接受的推荐项、方案 A、页面草图、系统数据流、营养算法、国内技术方案、数据模型与验收标准
 - **Compounded Knowledge**：not yet compounded
 
@@ -202,10 +202,3 @@
 - CloudBase 环境：https://docs.cloudbase.net/en/quick-start/env-overview
 - CloudBase 多模态：https://docs.cloudbase.net/ai/model/multimodal
 - 千问视觉结构化输出：https://help.aliyun.com/zh/model-studio/vision-model/
-
-## 恢复点
-
-- **已完成**：需求访谈、方案选择、页面结构、数据流、营养算法、国内技术路线、数据模型和验收标准均已逐段获用户认可。
-- **当前状态**：等待用户复核本书面规格；在复核完成前保持 `draft`。
-- **阻塞项**：用户尚未确认书面规格。
-- **下一步**：用户确认后把状态改为 `confirmed`，再进入 `/anvil:plan` 编写可执行实施计划。

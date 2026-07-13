@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">每日记录</title>
+  <desc id="description">深绿色圆角底上的米色记录卡与嫩芽</desc>
+  <rect width="512" height="512" fill="#173b2f"/>
+  <rect x="116" y="112" width="280" height="304" rx="40" fill="#f6f3ea"/>
+  <path d="M184 210h144M184 270h144M184 330h88" fill="none" stroke="#173b2f" stroke-linecap="round" stroke-width="24"/>
+  <path d="M256 156c0-42 32-72 76-72-1 43-31 72-76 72Zm0 0c-34-5-58-31-58-66 36 1 60 26 58 66Z" fill="#9fbd68"/>
+</svg>

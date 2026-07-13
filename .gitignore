@@ -10,6 +10,7 @@ coverage/
 
 # Local tooling
 .superpowers/
+.worktrees/
 .codex/
 .agents/
 
