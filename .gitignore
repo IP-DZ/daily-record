@@ -1,0 +1,25 @@
+# Dependencies and builds
+node_modules/
+dist/
+coverage/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local tooling
+.superpowers/
+.codex/
+.agents/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
