@@ -1,0 +1,398 @@
+# 架构方案：个人饮食与训练记录 PWA
+
+## 执行元数据
+
+- **Status**：active
+- **Workflow Stage**：plan
+- **Created**：2026-07-13
+- **Updated**：2026-07-13
+- **Source Of Truth Until**：本计划被执行完毕、被新版计划取代或被明确放弃
+- **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`（用户已于 2026-07-13 确认）
+- **Compounded Knowledge**：not yet compounded
+- **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
+- **Resume Point**：用户已批准隔离工作区与当前主控模型；从任务 1 开始，任务状态只在本文维护
+
+## 交付拆分
+
+完整规格跨越账号、营养、饮食、AI、训练、趋势、隐私与部署。为避免一次实施同时修改所有共享契约，按以下可独立验收的纵向切片推进：
+
+1. 基础设施、营养计算与首次设置。
+2. CloudBase 登录、数据隔离与目标同步。
+3. 今日页与手动饮食闭环。
+4. 图片分析、确认与失败恢复。
+5. 体重、训练和趋势。
+6. 离线草稿、隐私删除、端到端验收与部署。
+
+首个详细执行计划位于 `docs/superpowers/plans/2026-07-13-foundation-nutrition-onboarding.md`。后续切片在开始前生成各自的细化执行计划，但本文始终是 DAG 与状态的唯一来源。
+
+## 文件与模块边界
+
+### 模块：应用外壳 `src/app`
+- **职责**：路由、全局 Provider、错误边界、移动端布局与底部导航。
+- **输入**：认证状态、路由位置、查询缓存。
+- **输出**：页面组合与导航行为。
+- **依赖**：功能模块公开页面入口，不读取功能模块内部文件。
+- **不变量**：不包含营养公式、数据库查询或云密钥。
+
+### 模块：领域核心 `src/domain`
+- **职责**：营养目标、日汇总、体重反馈、训练容量等纯计算及共享领域类型。
+- **输入**：显式、已校验的值对象。
+- **输出**：不可变计算结果或带类型错误。
+- **依赖**：无浏览器、React、CloudBase 或网络依赖。
+- **不变量**：相同输入得到相同输出；内部保留小数，展示层负责格式化。
+
+### 模块：平台端口 `src/platform`
+- **职责**：定义认证、数据库、存储、AI、时钟、请求 ID 与日志端口，并提供 CloudBase/测试实现。
+- **输入**：领域命令和当前会话。
+- **输出**：领域 DTO 或标准化错误。
+- **依赖**：CloudBase SDK 只允许出现在 `src/platform/cloudbase`。
+- **不变量**：浏览器包不包含管理密钥；所有用户数据操作由会话用户约束。
+
+### 模块：功能切片 `src/features/*`
+- **职责**：按用户任务组织页面、组件、查询、命令和表单 schema。
+- **输入**：平台端口、领域函数和用户交互。
+- **输出**：可测试的页面行为。
+- **依赖**：只能依赖 `domain`、`platform` 公共接口和共享 UI；功能之间通过公开 DTO 协作。
+- **不变量**：AI 临时结果在确认前不得调用正式餐次写入命令。
+
+### 模块：云端函数 `cloud/functions/*`
+- **职责**：受信任的目标计算复核、图片分析代理、事务写入、级联删除、孤立对象清理。
+- **输入**：已认证请求和 Zod 合约。
+- **输出**：版本化 JSON 合约与稳定错误码。
+- **依赖**：数据库、私有存储和模型适配器。
+- **不变量**：鉴权先于资源读取；正式餐次写入为单事务；日志不含照片、验证码或密钥。
+
+### 模块：数据库与权限 `cloud/database`
+- **职责**：迁移、约束、索引、RLS/等价策略与权限验证。
+- **输入**：受控迁移。
+- **输出**：可重复创建的 schema 与策略。
+- **依赖**：CloudBase PostgreSQL。
+- **不变量**：所有用户拥有表含 `user_id`；默认拒绝跨用户访问；AI 请求 ID 在用户范围内唯一。
+
+### 模块：测试 `tests` 与同目录 `*.test.ts`
+- **职责**：单元、合约、权限、组件与端到端证据。
+- **输入**：公共接口与隔离测试环境。
+- **输出**：确定性通过/失败结果及必要截图。
+- **依赖**：Vitest、Testing Library、Playwright。
+- **不变量**：测试不得依赖真实照片、真实邮箱或生产密钥。
+
+## 依赖方向
+
+```mermaid
+graph TD
+  APP["src/app"] --> FEATURES["src/features/*"]
+  FEATURES --> DOMAIN["src/domain"]
+  FEATURES --> PORTS["src/platform ports"]
+  CLOUDBASE["src/platform/cloudbase"] --> PORTS
+  FUNCTIONS["cloud/functions"] --> CONTRACTS["packages/contracts"]
+  FUNCTIONS --> DB["cloud/database"]
+  FEATURES --> CONTRACTS
+  DOMAIN -. "无反向依赖" .-> DOMAIN
+```
+
+## 接口定义
+
+```ts
+export type UserId = string & { readonly __brand: 'UserId' };
+export type IsoDate = string & { readonly __brand: 'IsoDate' };
+
+export interface NutritionInputs {
+  age: number;
+  sex: 'male' | 'female';
+  heightCm: number;
+  weightKg: number;
+  activityLevel: 'sedentary' | 'light' | 'moderate' | 'high' | 'veryHigh';
+  proteinGramsPerKg: number;
+  fatCalorieRatio: number;
+  surplusRatio: number;
+}
+
+export interface NutritionTargets {
+  restingKcal: number;
+  maintenanceKcal: number;
+  caloriesKcal: number;
+  proteinGrams: number;
+  fatGrams: number;
+  carbsGrams: number;
+}
+
+export interface AuthPort {
+  requestEmailCode(email: string): Promise<void>;
+  verifyEmailCode(email: string, code: string): Promise<{ userId: UserId }>;
+  signOut(): Promise<void>;
+  currentUser(): Promise<{ userId: UserId } | null>;
+}
+
+export interface MealRepository {
+  listByDate(date: IsoDate): Promise<Meal[]>;
+  saveManual(command: SaveMealCommand): Promise<Meal>;
+  confirmAnalysis(command: ConfirmAnalysisCommand): Promise<Meal>;
+  deleteMeal(mealId: string): Promise<void>;
+}
+
+export interface AiAnalysisPort {
+  create(command: CreateAnalysisCommand): Promise<AiAnalysis>;
+  get(analysisId: string): Promise<AiAnalysis>;
+}
+```
+
+共享请求/响应 schema 位于 `packages/contracts`，浏览器与云函数共同引用。接口用 `schemaVersion: 1` 版本化；错误统一为 `{ code, message, requestId, retryable }`。
+
+## 数据与安全设计
+
+- PostgreSQL 迁移按 `cloud/database/migrations/NNNN_name.sql` 顺序执行；迁移必须可在空库重复验证。
+- `profiles` 以 `user_id` 为主键；其他用户表含 `user_id` 外键和常用日期索引。
+- `food_items`、`workout_exercises`、`workout_sets` 使用级联外键；删除餐次/账号时云函数同时清理私有对象并返回核对计数。
+- 每个写命令带 `requestId`；`ai_analyses(user_id, request_id)` 建唯一索引。
+- 图片对象键为 `users/{userId}/meals/{analysisId}/{uuid}.webp`，读取仅签发短时 URL。
+- 每账号每天图片分析上限默认 20 次；服务端配置可覆盖，客户端只展示剩余次数。
+- CloudBase 环境 ID、模型名和公开端点通过环境变量注入；AI/数据库管理密钥只存在云函数环境。
+
+## 性能与可用性预算
+
+- 手机 4G、冷缓存、生产构建下：LCP 目标 ≤ 2.5 秒，初始压缩 JavaScript 目标 ≤ 250 KB。
+- 今日页个人数据查询 p95 ≤ 800 ms；手动餐次保存 p95 ≤ 1.5 秒（不含用户网络异常）。
+- 图片在浏览器压缩为 WebP/JPEG，最长边 ≤ 1600 px、单张目标 ≤ 1.5 MB。
+- AI 分析 30 秒超时；schema 无效只重试 1 次；失败不写正式餐次。
+- 断网草稿保存在 IndexedDB；恢复网络后必须由用户点击继续，禁止后台自动提交。
+
+## 日志规范
+
+所有结构化日志字段固定为：
+
+```ts
+interface AppLog {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error';
+  event: string;
+  requestId?: string;
+  userIdHash?: string;
+  entityType?: string;
+  entityId?: string;
+  durationMs?: number;
+  outcome: 'success' | 'rejected' | 'failure';
+  errorCode?: string;
+}
+```
+
+发出点：认证请求/验证、目标保存、餐次事务、AI 请求/重试/确认、删除任务、限流、定时清理。禁止记录邮箱全文、验证码、图片内容、签名 URL、模型密钥及自由文本备注。
+
+## RTK 过滤预设
+
+- 单元测试：`pnpm test -- --run src/domain/nutrition/nutrition.test.ts`
+- 组件测试：`pnpm test -- --run src/features/<feature>`
+- 类型检查：`pnpm typecheck 2>&1 | tail -80`
+- 端到端：`pnpm test:e2e -- --project=mobile-chromium --reporter=line`
+- 迁移验证：`pnpm db:test 2>&1 | rg 'PASS|FAIL|ERROR|policy|migration'`
+- 体积检查：`pnpm build && du -sh dist && find dist/assets -type f -maxdepth 1 -print`
+- 实施期间运行 `rtk gain` 观察过滤收益，但不把 RTK 作为构建依赖。
+
+## 历史经验约束
+
+当前项目没有 `docs/solutions` 历史知识库，因此没有可复用的既有项目经验约束。
+
+## 关键模式检查
+
+- ❌ React 页面直接调用 CloudBase SDK；✅ 页面依赖 `platform` 端口。
+- ❌ AI 返回直接写入 `meals`；✅ 先落 `ai_analyses`，用户确认后事务转正。
+- ❌ 用前端过滤实现隔离；✅ 数据库/存储默认拒绝并按会话用户授权。
+- ❌ 缓存营养汇总但不维护一致性；✅ 首版查询时从正式条目聚合，必要时再通过同事务物化。
+- ❌ 自动接受体重调节建议；✅ 只展示 ±100 kcal 建议，用户明确确认后新建目标版本。
+- ❌ 离线恢复后自动重放；✅ 草稿恢复后等待用户主动提交。
+
+## 简化审计
+
+- 首版不引入微服务、GraphQL、状态机框架、事件总线或自建认证服务。
+- 不提前物化所有趋势；个人规模由索引查询和客户端纯函数聚合满足。
+- 不建设通用插件系统；仅为视觉模型保留一个服务端适配器接口。
+- 不做后台自动同步队列；只实现本地草稿和用户确认恢复。
+- 删除上述之外的抽象后仍满足规格，已通过“删除 50%”审计。
+
+## 任务 DAG
+
+```mermaid
+graph TD
+  T1["任务 1：基础设施与营养首次设置"] --> T2["任务 2：CloudBase 账号与数据隔离"]
+  T2 --> T3["任务 3：今日页与手动饮食"]
+  T2 --> T4["任务 4：体重记录与反馈"]
+  T2 --> T5["任务 5：训练记录与复制"]
+  T3 --> T6["任务 6：图片分析与确认"]
+  T3 --> T7["任务 7：营养趋势"]
+  T4 --> T8["任务 8：综合趋势"]
+  T5 --> T8
+  T7 --> T8
+  T6 --> T9["任务 9：离线、隐私、E2E 与部署"]
+  T8 --> T9
+```
+
+## 并行执行计划
+
+| Layer | Parallel Group | Tasks | Execution | Reason |
+|---|---|---|---|---|
+| 1 | G1 | 任务 1 | serial | 创建共享配置、领域接口和测试设施 |
+| 2 | G2 | 任务 2 | serial | 修改共享认证、schema、迁移和权限契约 |
+| 3 | G3A | 任务 3 | serial | 建立餐次共享接口，供 AI 与营养趋势依赖 |
+| 3 | G3B | 任务 4、任务 5 | parallel | 各自拥有独立 feature、表和测试目录 |
+| 4 | G4A | 任务 6 | serial | 修改餐次确认接口、云函数和存储策略 |
+| 4 | G4B | 任务 7 | parallel | 只读取已稳定餐次接口，写集独立 |
+| 5 | G5 | 任务 8 | serial | 组合体重、营养和训练公开读模型 |
+| 6 | G6 | 任务 9 | serial | 修改全局 PWA、删除流程、E2E 和部署配置 |
+
+## 任务列表
+
+### 任务 1：基础设施、营养计算与首次设置
+- **Layer**：1
+- **Parallel Group**：G1
+- **Execution**：serial
+- **Parallel Blocker**：共享配置、路由、领域类型和全局测试设施
+- **Ownership**：`package.json`、构建配置、`src/app/**`、`src/domain/nutrition/**`、`src/features/onboarding/**`、`tests/e2e/onboarding.spec.ts`
+- **Read Set**：需求规格、设计快照、`AGENTS.md`
+- **Write Set**：同 Ownership
+- **描述**：建立 React/TypeScript/Vite PWA 基座，以 TDD 完成公式、校验、首次设置与可编辑目标预览。
+- **成功标准**：单元测试覆盖全部公式和边界；移动视口 E2E 完成设置并看到四项目标；`pnpm lint && pnpm typecheck && pnpm test && pnpm build` 全通过。
+- **预估 Token**：180k
+- **依赖**：无
+- **涉及文件**：详见首个 Superpowers 执行计划。
+- **执行指令**：执行 `docs/superpowers/plans/2026-07-13-foundation-nutrition-onboarding.md`，完成后更新本文任务状态。
+
+### 任务 2：CloudBase 账号、数据 schema 与隔离
+- **Layer**：2
+- **Parallel Group**：G2
+- **Execution**：serial
+- **Parallel Blocker**：共享认证接口、迁移、RLS、环境配置
+- **Ownership**：`src/platform/**`、`src/features/auth/**`、`packages/contracts/**`、`cloud/database/**`、`cloud/functions/auth/**`、`tests/security/**`
+- **Read Set**：任务 1 公共接口、CloudBase 当前环境配置
+- **Write Set**：同 Ownership
+- **描述**：打通邮箱验证码、会话恢复、资料与目标版本同步，建立全表用户隔离策略。
+- **成功标准**：两个测试账号互不可读写；登录/退出/跨设备目标同步 E2E 通过；浏览器构建扫描不到服务端密钥。
+- **预估 Token**：220k
+- **依赖**：任务 1
+- **涉及文件**：认证 feature、CloudBase 适配器、合约、迁移和权限测试。
+- **执行指令**：先写端口合约测试，再写迁移/RLS，最后接 UI；真实验证码仅在隔离测试环境验证。
+
+### 任务 3：今日页与手动饮食闭环
+- **Layer**：3
+- **Parallel Group**：G3A
+- **Execution**：serial
+- **Parallel Blocker**：建立后续 AI 与趋势共用的餐次接口
+- **Ownership**：`src/features/today/**`、`src/features/meals/**`、`src/domain/meals/**`、`cloud/functions/meals/**`、餐次迁移与测试
+- **Read Set**：任务 2 会话、用户隔离和合约
+- **Write Set**：同 Ownership
+- **描述**：完成手动餐次增删改复制、按日查询与四项汇总。
+- **成功标准**：餐次变更后日汇总严格等于条目之和；事务失败时汇总不变；移动端 E2E 完成手动记餐和删除。
+- **预估 Token**：220k
+- **依赖**：任务 2
+- **涉及文件**：今日/饮食 feature、领域聚合、餐次云函数和迁移。
+- **执行指令**：先以失败的汇总/事务测试锁定行为，再实现最小 UI 与后端。
+
+### 任务 4：体重记录与热量反馈
+- **Layer**：3
+- **Parallel Group**：G3B
+- **Execution**：parallel
+- **Parallel Blocker**：无；写集与任务 5 独立
+- **Ownership**：`src/features/weight/**`、`src/domain/weight/**`、`cloud/functions/weight/**`、体重迁移与测试
+- **Read Set**：任务 2 会话与合约
+- **Write Set**：同 Ownership
+- **描述**：体重录入、7 日均线和 21 天 ±100 kcal 建议。
+- **成功标准**：少于 8 条不建议；三个增重区间单元测试通过；建议不自动修改目标。
+- **预估 Token**：130k
+- **依赖**：任务 2
+- **涉及文件**：体重 feature、纯计算、存储和测试。
+- **执行指令**：固定日期/时区测试，禁止使用系统隐式当前时间。
+
+### 任务 5：训练记录、复制与容量
+- **Layer**：3
+- **Parallel Group**：G3B
+- **Execution**：parallel
+- **Parallel Blocker**：无；写集与任务 4 独立
+- **Ownership**：`src/features/workouts/**`、`src/domain/workouts/**`、`cloud/functions/workouts/**`、训练迁移与测试
+- **Read Set**：任务 2 会话与合约
+- **Write Set**：同 Ownership
+- **描述**：训练场次、动作、组、复制上次训练和容量计算。
+- **成功标准**：复制保持动作/组顺序但生成新 ID；仅完成组计入容量；移动端 E2E 保存并查看历史。
+- **预估 Token**：170k
+- **依赖**：任务 2
+- **涉及文件**：训练 feature、领域计算、事务和测试。
+- **执行指令**：以容量与复制纯函数测试开工，再接事务与表单。
+
+### 任务 6：图片分析、人工确认与失败恢复
+- **Layer**：4
+- **Parallel Group**：G4A
+- **Execution**：serial
+- **Parallel Blocker**：共享餐次确认接口、存储策略、AI 云函数和合约
+- **Ownership**：`src/features/photo-meal/**`、`src/platform/image/**`、`packages/contracts/ai/**`、`cloud/functions/ai/**`、私有存储策略与合约测试
+- **Read Set**：任务 3 餐次写接口、任务 2 会话与权限
+- **Write Set**：同 Ownership
+- **描述**：客户端压缩、私有上传、国内视觉模型适配、schema 校验、低置信度询问、确认转正和孤儿清理。
+- **成功标准**：正常/缺字段/类型错/低置信度/超时/限流/重复请求测试通过；确认前日汇总不变；确认事务失败完全回滚。
+- **预估 Token**：260k
+- **依赖**：任务 3
+- **涉及文件**：图片 feature、合约、模型适配器、云函数和策略。
+- **执行指令**：模型测试使用固定夹具；真实模型仅做受控 smoke，不进入常规测试。
+
+### 任务 7：营养趋势
+- **Layer**：4
+- **Parallel Group**：G4B
+- **Execution**：parallel
+- **Parallel Blocker**：无；只依赖稳定餐次读模型
+- **Ownership**：`src/features/nutrition-trends/**`、`src/domain/trends/nutrition*` 及其测试
+- **Read Set**：任务 3 餐次公开读模型
+- **Write Set**：同 Ownership
+- **描述**：按日/周展示热量和三大营养素完成情况。
+- **成功标准**：跨目标版本时按日期取正确目标；空数据、部分周和完整周测试通过。
+- **预估 Token**：100k
+- **依赖**：任务 3
+- **涉及文件**：营养趋势 feature 和纯聚合测试。
+- **执行指令**：优先表格/简洁图形，确保屏幕阅读器有等价文本。
+
+### 任务 8：综合趋势
+- **Layer**：5
+- **Parallel Group**：G5
+- **Execution**：serial
+- **Parallel Blocker**：组合三个切片的公开读模型
+- **Ownership**：`src/features/trends/**`、`src/domain/trends/**`、趋势组件和 E2E
+- **Read Set**：任务 4、5、7 的公开 DTO
+- **Write Set**：同 Ownership
+- **描述**：统一体重均线、营养完成率、动作重量/容量趋势。
+- **成功标准**：三个趋势入口在移动端可切换；图表与文本摘要数值一致；空状态可理解。
+- **预估 Token**：120k
+- **依赖**：任务 4、5、7
+- **涉及文件**：综合趋势 feature 与测试。
+- **执行指令**：只组合公共 DTO，不跨 feature 读取内部 store。
+
+### 任务 9：离线草稿、隐私删除、系统 E2E 与部署
+- **Layer**：6
+- **Parallel Group**：G6
+- **Execution**：serial
+- **Parallel Blocker**：修改全局 Service Worker、删除事务、E2E 和部署配置
+- **Ownership**：`src/app/**`、`src/platform/offline/**`、`src/features/settings/**`、`cloud/functions/delete-account/**`、清理任务、`tests/e2e/**`、部署配置与运维文档
+- **Read Set**：全部已稳定公共接口
+- **Write Set**：同 Ownership
+- **描述**：离线草稿、恢复确认、餐次/账号彻底删除、PWA 安装更新、配额/日志、性能与大陆网络 smoke。
+- **成功标准**：完整移动端 E2E 通过；跨用户权限套件通过；删除后数据库/对象计数为零；LCP、包体和查询达到预算；测试地址在大陆网络完成登录上传分析。
+- **预估 Token**：220k
+- **依赖**：任务 6、8
+- **涉及文件**：全局 PWA、离线、设置、删除、E2E、部署和文档。
+- **执行指令**：在非生产环境执行删除与真实 AI smoke；保留可复现证据和错误码，不保存敏感输入。
+
+## 会话拆分点
+
+- 拆分点 1：任务 2 后，已有可登录、隔离、同步的营养目标闭环。
+- 拆分点 2：任务 3 后，已有不依赖 AI 的完整饮食 MVP。
+- 拆分点 3：任务 6 后，图片分析主链路完成。
+- 拆分点 4：任务 8 后，全部业务功能完成，进入系统加固与部署。
+
+每个拆分点必须满足 `pnpm lint && pnpm typecheck && pnpm test && pnpm build`；已覆盖的 E2E 必须通过。若真实 CloudBase/模型环境缺失，记录环境负责人、缺失变量和本地合约测试证据，不得伪报通过。
+
+## 通过条件
+
+- [x] 模块职责单一，依赖方向明确，无依赖穿透。
+- [x] 通过简化审计，未引入超出首版需求的基础设施。
+- [x] 日志字段、发出点和敏感字段禁令明确。
+- [x] 所有任务具有可验证成功标准，DAG 无环。
+- [x] 每个任务包含 Ownership、Read Set、Write Set，且同并行组写集互斥。
+- [x] 共享 schema、权限、迁移、配置和全局测试任务均串行。
+- [x] 定义构建、测试、E2E、权限、性能和人工 smoke 证据。
+- [x] `AGENTS.md` 已存在且包含当前 Anvil 规则。
+- [x] 本文是唯一任务状态来源，并提供明确恢复点。
+- [x] 用户已批准本计划，`Status` 已改为 `confirmed`，准备进入 `/anvil:code`。
