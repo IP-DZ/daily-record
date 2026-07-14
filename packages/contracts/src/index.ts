@@ -13,6 +13,24 @@ export {
 } from './meals';
 export type { CreateMealInput, MealEntry, MealNutritionTotals, UpdateMealInput } from './meals';
 export {
+  confirmPhotoMealAnalysisInputSchema,
+  confirmPhotoMealAnalysisResultSchema,
+  createPhotoMealAnalysisInputSchema,
+  photoMealAnalysisSchema,
+  photoMealCandidateSchema,
+  preparedMealPhotoSchema,
+} from './photoMeal';
+export type {
+  ConfirmPhotoMealAnalysisInput,
+  ConfirmPhotoMealAnalysisResult,
+  CreatePhotoMealAnalysisInput,
+  PhotoMealAnalysis,
+  PhotoMealAnalysisStatus,
+  PhotoMealCandidate,
+  PhotoMealCandidateMealInput,
+  PreparedMealPhoto,
+} from './photoMeal';
+export {
   createWeightEntryInputSchema,
   updateWeightEntryInputSchema,
   weightEntrySchema,

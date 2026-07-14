@@ -2,15 +2,15 @@
 
 ## 执行元数据
 
-- **Status**：confirmed
-- **Workflow Stage**：plan
+- **Status**：active
+- **Workflow Stage**：code
 - **Created**：2026-07-14
 - **Updated**：2026-07-14
 - **Source Of Truth Until**：图片餐食分析切片完成 code、review、提交、推送，并把证据折回 `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的“图片识别”需求、`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md` 任务 6、用户已批准的方案 A 与大陆网络约束
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：尚未开始代码执行。下一步执行 Task 1：先写失败的 AI 合约与领域测试，再实现共享 `photoMeal` 合约和纯函数。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化先使用固定夹具和 test platform。
+- **Resume Point**：Task 1 已完成代码、聚焦验证和 Anvil 审阅，待保护性提交/推送后继续 Task 2：浏览器图片预处理端口。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化先使用固定夹具和 test platform。
 
 ## 模块边界
 
@@ -225,6 +225,26 @@ graph TD
   - Create `src/domain/photoMeal/photoMealAnalysis.ts`
   - Create `src/domain/photoMeal/photoMealAnalysis.test.ts`
   - Create `src/domain/photoMeal/index.ts`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `packages/contracts/src/photoMeal.ts`
+  - `packages/contracts/src/photoMeal.test.ts`
+  - `packages/contracts/src/index.ts`
+  - `src/domain/photoMeal/photoMealAnalysis.ts`
+  - `src/domain/photoMeal/photoMealAnalysis.test.ts`
+  - `src/domain/photoMeal/index.ts`
+- **Accepted Change Baseline**：
+  - 新增严格 `PhotoMealCandidate`、`PhotoMealAnalysis`、`PreparedMealPhoto`、创建/确认输入与确认结果 schema；客户端输入不包含 `userId`；图片对象 key 只接受 `users/` 私有对象 key 且拒绝 URL、查询串和 fragment。
+  - `PreparedMealPhoto` 限制 JPEG/WebP data URL、整数尺寸、最大 1.5 MB，并要求 data URL MIME 与 `mimeType` 一致。
+  - 新增纯函数 `calculateCandidateTotals`、`analysisNeedsUserInput`、`candidateToMealInput`，无浏览器、CloudBase、网络、时间或持久化依赖。
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run packages/contracts/src/photoMeal.test.ts src/domain/photoMeal/photoMealAnalysis.test.ts` 先因 `./photoMeal` 和 `./photoMealAnalysis` 不存在失败。
+  - MIME 一致性补强 RED：同命令先出现 `rejects mismatched image data url mime type` 失败。
+  - GREEN：同命令通过，2 个测试文件、20 条测试通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `git diff --check` 通过。
+- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-14-photo-meal-contracts-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。
 - **执行指令**：
   1. 先写失败测试，覆盖正常分析、低置信度、失败状态、确认输入、额外 key、坏营养值和 URL 形态的 `imageObjectKey`。
   2. 运行 RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run packages/contracts/src/photoMeal.test.ts src/domain/photoMeal/photoMealAnalysis.test.ts`，预期因文件不存在失败。
