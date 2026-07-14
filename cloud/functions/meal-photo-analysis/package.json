@@ -1,0 +1,6 @@
+{
+  "name": "meal-photo-analysis",
+  "private": true,
+  "type": "module",
+  "main": "src/handler.ts"
+}

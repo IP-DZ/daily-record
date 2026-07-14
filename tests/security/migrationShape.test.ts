@@ -29,6 +29,7 @@ describe('production migration security shape', () => {
       'workouts',
       'workout_exercises',
       'workout_sets',
+      'ai_analyses',
     ];
     const tables = await db.query<{ relname: string; relrowsecurity: boolean }>(`
       SELECT relname, relrowsecurity
@@ -41,11 +42,13 @@ describe('production migration security shape', () => {
           'weight_entries',
           'workouts',
           'workout_exercises',
-          'workout_sets'
+          'workout_sets',
+          'ai_analyses'
         )
       ORDER BY relname
     `);
     expect(tables.rows).toEqual([
+      { relname: 'ai_analyses', relrowsecurity: true },
       { relname: 'meals', relrowsecurity: true },
       { relname: 'nutrition_goals', relrowsecurity: true },
       { relname: 'profiles', relrowsecurity: true },
@@ -66,7 +69,8 @@ describe('production migration security shape', () => {
           'weight_entries',
           'workouts',
           'workout_exercises',
-          'workout_sets'
+          'workout_sets',
+          'ai_analyses'
         )
       ORDER BY tablename, cmd
     `);
@@ -102,7 +106,8 @@ describe('production migration security shape', () => {
           'weight_entries',
           'workouts',
           'workout_exercises',
-          'workout_sets'
+          'workout_sets',
+          'ai_analyses'
         )
     `);
     expect(tablePrivileges.rows).toEqual([]);
@@ -119,7 +124,8 @@ describe('production migration security shape', () => {
           'weight_entries',
           'workouts',
           'workout_exercises',
-          'workout_sets'
+          'workout_sets',
+          'ai_analyses'
         )
     `);
     expect(columnPrivileges.rows).toEqual([]);
@@ -154,11 +160,15 @@ describe('production migration security shape', () => {
           'create_my_workout',
           'update_my_workout',
           'delete_my_workout',
-          'copy_my_latest_workout'
+          'copy_my_latest_workout',
+          'create_my_photo_meal_analysis',
+          'get_my_photo_meal_analysis',
+          'confirm_my_photo_meal_analysis',
+          'discard_my_photo_meal_analysis'
         )
       ORDER BY p.proname
     `);
-    expect(functions.rows).toHaveLength(16);
+    expect(functions.rows).toHaveLength(20);
     for (const fn of functions.rows) {
       expect(fn.prosecdef).toBe(true);
       expect(fn.proconfig).toContain('search_path=pg_catalog, public, auth');
@@ -199,6 +209,18 @@ describe('production migration security shape', () => {
     expect(functions.rows.find(({ proname }) => proname === 'copy_my_latest_workout')?.arguments).toBe(
       'target_workout_date text',
     );
+    expect(functions.rows.find(({ proname }) => proname === 'create_my_photo_meal_analysis')?.arguments).toBe(
+      'payload jsonb',
+    );
+    expect(functions.rows.find(({ proname }) => proname === 'get_my_photo_meal_analysis')?.arguments).toBe(
+      'analysis_id uuid',
+    );
+    expect(functions.rows.find(({ proname }) => proname === 'confirm_my_photo_meal_analysis')?.arguments).toBe(
+      'analysis_id uuid, meal_date text, items jsonb',
+    );
+    expect(functions.rows.find(({ proname }) => proname === 'discard_my_photo_meal_analysis')?.arguments).toBe(
+      'analysis_id uuid',
+    );
 
     const executePrivileges = await db.query<{ grantee: string; routine_name: string }>(`
       SELECT grantee, routine_name
@@ -220,20 +242,28 @@ describe('production migration security shape', () => {
           'create_my_workout',
           'update_my_workout',
           'delete_my_workout',
-          'copy_my_latest_workout'
+          'copy_my_latest_workout',
+          'create_my_photo_meal_analysis',
+          'get_my_photo_meal_analysis',
+          'confirm_my_photo_meal_analysis',
+          'discard_my_photo_meal_analysis'
         )
         AND grantee IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
       ORDER BY grantee, routine_name
     `);
     expect(executePrivileges.rows).toEqual([
+      { grantee: 'authenticated', routine_name: 'confirm_my_photo_meal_analysis' },
       { grantee: 'authenticated', routine_name: 'copy_my_latest_workout' },
       { grantee: 'authenticated', routine_name: 'copy_my_meal' },
       { grantee: 'authenticated', routine_name: 'create_my_meal' },
+      { grantee: 'authenticated', routine_name: 'create_my_photo_meal_analysis' },
       { grantee: 'authenticated', routine_name: 'create_my_weight_entry' },
       { grantee: 'authenticated', routine_name: 'create_my_workout' },
       { grantee: 'authenticated', routine_name: 'delete_my_meal' },
       { grantee: 'authenticated', routine_name: 'delete_my_weight_entry' },
       { grantee: 'authenticated', routine_name: 'delete_my_workout' },
+      { grantee: 'authenticated', routine_name: 'discard_my_photo_meal_analysis' },
+      { grantee: 'authenticated', routine_name: 'get_my_photo_meal_analysis' },
       { grantee: 'authenticated', routine_name: 'list_my_meals_by_date' },
       { grantee: 'authenticated', routine_name: 'list_my_weight_entries' },
       { grantee: 'authenticated', routine_name: 'list_my_workouts' },
@@ -256,7 +286,8 @@ describe('production migration security shape', () => {
           'weight_entries',
           'workouts',
           'workout_exercises',
-          'workout_sets'
+          'workout_sets',
+          'ai_analyses'
         )) AS tables,
         (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'public' AND tablename IN (
           'profiles',
@@ -265,9 +296,10 @@ describe('production migration security shape', () => {
           'weight_entries',
           'workouts',
           'workout_exercises',
-          'workout_sets'
+          'workout_sets',
+          'ai_analyses'
         )) AS policies
     `);
-    expect(shape.rows[0]).toEqual({ tables: 7, policies: 28 });
+    expect(shape.rows[0]).toEqual({ tables: 8, policies: 32 });
   });
 });

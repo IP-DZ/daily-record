@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的“图片识别”需求、`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md` 任务 6、用户已批准的方案 A 与大陆网络约束
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：Task 1、Task 2 已提交推送；Task 3 已完成代码、聚焦验证和 Anvil 审阅，待保护性提交/推送后继续 Task 4：生产迁移、RLS/RPC 与云函数纯处理器。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化先使用固定夹具和 test platform。
+- **Resume Point**：Task 1、Task 2、Task 3 已提交推送；Task 4 已完成代码、聚焦验证和 Anvil 审阅，待保护性提交/推送后继续 Task 5：照片记餐 UI 与 App 路由。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化先使用固定夹具和 test platform。
 
 ## 模块边界
 
@@ -365,6 +365,28 @@ graph TD
   - Create `cloud/functions/meal-photo-analysis/src/handler.ts`
   - Create `cloud/functions/meal-photo-analysis/src/handler.test.ts`
   - Create `cloud/functions/meal-photo-analysis/package.json`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `cloud/database/migrations/0004_photo_meal_analysis.sql`
+  - `cloud/functions/meal-photo-analysis/package.json`
+  - `cloud/functions/meal-photo-analysis/src/handler.ts`
+  - `cloud/functions/meal-photo-analysis/src/handler.test.ts`
+  - `tests/security/photoMealAnalysisIsolation.test.ts`
+  - `tests/security/migrationShape.test.ts`
+  - `tests/security/pgliteAuthHarness.ts`
+- **Accepted Change Baseline**：
+  - 新增 `ai_analyses` 表、按 `(user_id, request_id)` 幂等去重、RLS own-row policies、撤销 `anon/authenticated` 直接表权限，仅 `service_role` 表权限。
+  - 新增 `create/get/confirm/discard_my_photo_meal_analysis` definer RPC，固定 `search_path`，参数不接受 `user_id`；确认 RPC 在同一事务里把候选项写入正式 `meals` 并更新分析状态。
+  - 新增云函数纯 handler，依赖注入 storage/model/database/clock/logger；create 流程保存压缩图、调用模型、模型 JSON 校验失败重试一次、最终失败写入安全 failed 分析；get/confirm/discard 使用会话用户身份，不接受客户端 `userId`。
+  - 安全测试覆盖 A/B 用户隔离、直接表访问拒绝、跨用户确认无部分写入、非法 payload 拒绝、丢弃/已确认不可再次确认、迁移 shape、handler 错误脱敏和每日限流。
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/photoMealAnalysisIsolation.test.ts tests/security/migrationShape.test.ts` 先因 `0004_photo_meal_analysis.sql` 不存在失败。
+  - 深度候选校验 RED：`photoMealAnalysisIsolation.test.ts` 先证明 DB RPC 会接受 `confidence: 2` 的非法候选项。
+  - GREEN：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/photoMealAnalysisIsolation.test.ts tests/security/migrationShape.test.ts cloud/functions/meal-photo-analysis/src/handler.test.ts` 通过，3 个测试文件、13 条测试通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `git diff --check` 通过。
+- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-14-photo-meal-security-handler-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。真实 CloudBase/模型 smoke 仍 blocked，owner：后续部署隔离环境配置。
 - **执行指令**：
   1. 写 PGlite RED：创建/读取/确认/丢弃只限本人；confirm 前 meals count 和 totals 不变；confirm 后创建 meals；坏 payload/跨用户/重复确认不产生部分写入。
   2. 写 handler RED：模型返回正常 JSON、缺字段、错误类型、低置信度、超时、限流和重复 requestId。
