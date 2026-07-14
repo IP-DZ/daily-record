@@ -161,6 +161,25 @@ graph TD
   - Create `src/domain/trends/nutritionTrends.ts`
   - Create `src/domain/trends/nutritionTrends.test.ts`
   - Create `src/domain/trends/index.ts`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `packages/contracts/src/nutritionGoals.ts`
+  - `packages/contracts/src/nutritionGoals.test.ts`
+  - `packages/contracts/src/index.ts`
+  - `src/domain/trends/nutritionTrends.ts`
+  - `src/domain/trends/nutritionTrends.test.ts`
+  - `src/domain/trends/index.ts`
+- **Accepted Change Baseline**：
+  - 新增严格 `NutritionGoalVersion` 合约，包含 `version`、`effectiveDate`、`targets`、`createdAt`，拒绝 `userId`、坏日期、非正整数版本、负目标、非有限目标和额外 target key。
+  - 新增纯领域函数 `selectGoalForDate`、`buildDailyNutritionTrend`、`buildWeeklyNutritionTrend`；目标按 `effectiveDate <= date` 最新版本选择；无目标时目标和完成率均为 `null`；无餐食日摄入为 0；周汇总按连续 7 天分组并累加每日目标。
+  - 新增 `src/domain/trends/index.ts` 和 contracts barrel export，供后续平台/UI 任务消费。
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run packages/contracts/src/nutritionGoals.test.ts src/domain/trends/nutritionTrends.test.ts` 先因 `./nutritionGoals` 和 `./nutritionTrends` 不存在失败。
+  - GREEN：同命令通过，2 个测试文件、12 条测试通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `git diff --check` 通过。
+- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-14-nutrition-trends-domain-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。
 - **执行指令**：
   1. 先写 RED 测试，覆盖 schema 严格性、`selectGoalForDate`、7 天日趋势、周汇总和无目标行为。
   2. 运行 RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run packages/contracts/src/nutritionGoals.test.ts src/domain/trends/nutritionTrends.test.ts`。

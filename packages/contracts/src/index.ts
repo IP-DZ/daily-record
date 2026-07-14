@@ -12,6 +12,8 @@ export {
   updateMealInputSchema,
 } from './meals';
 export type { CreateMealInput, MealEntry, MealNutritionTotals, UpdateMealInput } from './meals';
+export { nutritionGoalVersionSchema } from './nutritionGoals';
+export type { NutritionGoalVersion } from './nutritionGoals';
 export {
   confirmPhotoMealAnalysisInputSchema,
   confirmPhotoMealAnalysisResultSchema,
