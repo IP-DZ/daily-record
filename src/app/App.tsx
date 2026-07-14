@@ -4,10 +4,12 @@ import { AuthGate } from '../features/auth';
 import { OnboardingPage } from '../features/onboarding';
 import { TodayPage } from '../features/today';
 import { WeightPage } from '../features/weight';
+import { WorkoutsPage } from '../features/workouts';
 import type { AuthPort } from '../platform/auth';
 import type { MealsRepository } from '../platform/meals';
 import type { ProfileSettingsRepository } from '../platform/settings/ProfileSettingsRepository';
 import type { WeightRepository } from '../platform/weight';
+import type { WorkoutsRepository } from '../platform/workouts';
 import { readCloudBasePublicConfig } from '../platform/cloudbase/cloudBaseConfig';
 import type { CloudBasePublicConfig } from '../platform/cloudbase/cloudBaseConfig';
 import {
@@ -46,6 +48,7 @@ interface AppProps {
   profileSettings?: ProfileSettingsRepository;
   meals?: MealsRepository;
   weight?: WeightRepository;
+  workouts?: WorkoutsRepository;
   cloudBaseEnv?: Readonly<Record<string, string | boolean | undefined>>;
   platformLoader?: PlatformLoader;
 }
@@ -55,6 +58,7 @@ type Platform = {
   profileSettings: ProfileSettingsRepository;
   meals: MealsRepository;
   weight: WeightRepository;
+  workouts: WorkoutsRepository;
 };
 type PlatformLoader = (config: CloudBasePublicConfig) => Promise<Platform>;
 const TEST_PLATFORM_CONFIG: CloudBasePublicConfig = {
@@ -73,6 +77,7 @@ export function App({
   profileSettings: injectedProfileSettings,
   meals: injectedMeals,
   weight: injectedWeight,
+  workouts: injectedWorkouts,
   cloudBaseEnv = import.meta.env,
   platformLoader = defaultPlatformLoader,
 }: AppProps = {}) {
@@ -131,6 +136,7 @@ export function App({
     profileSettings: ProfileSettingsRepository | null;
     meals: MealsRepository | null;
     weight: WeightRepository | null;
+    workouts: WorkoutsRepository | null;
   }>(() => ({
     config: publicConfig,
     status: publicConfig === null ? 'idle' : 'loading',
@@ -138,6 +144,7 @@ export function App({
     profileSettings: null,
     meals: null,
     weight: null,
+    workouts: null,
   }));
   const [loadAttempt, setLoadAttempt] = useState(0);
 
@@ -152,6 +159,7 @@ export function App({
       profileSettings: null,
       meals: null,
       weight: null,
+      workouts: null,
     });
     void selectedPlatformLoader(publicConfig)
       .then((platform) => {
@@ -162,6 +170,7 @@ export function App({
           profileSettings: platform.profileSettings,
           meals: platform.meals,
           weight: platform.weight,
+          workouts: platform.workouts,
         });
       })
       .catch(() => {
@@ -172,6 +181,7 @@ export function App({
           profileSettings: null,
           meals: null,
           weight: null,
+          workouts: null,
         });
       });
     return () => {
@@ -188,11 +198,13 @@ export function App({
       profileSettings: null,
       meals: null,
       weight: null,
+      workouts: null,
     };
   const auth = injectedAuth ?? currentPlatformState.auth;
   const profileSettings = injectedProfileSettings ?? currentPlatformState.profileSettings;
   const meals = injectedMeals ?? currentPlatformState.meals;
   const weight = injectedWeight ?? currentPlatformState.weight;
+  const workouts = injectedWorkouts ?? currentPlatformState.workouts;
   const configurationMissing = injectedAuth === undefined
     && !testPlatformRequested
     && publicConfig === null;
@@ -273,6 +285,24 @@ export function App({
       体重记录需要登录后使用；请先配置 CloudBase 或打开测试平台。
     </main>
   );
+  const workoutsPage = auth !== null && workouts !== null ? (
+    <AuthGate auth={auth}>
+      <WorkoutsPage workouts={workouts} />
+    </AuthGate>
+  ) : publicConfig !== null && currentPlatformState.status === 'error' ? (
+    <main className="auth-loading">
+      <p role="alert">认证服务加载失败，请稍后重试。</p>
+      <button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>
+        重新连接
+      </button>
+    </main>
+  ) : publicConfig !== null ? (
+    <main className="auth-loading" role="status">正在连接认证服务…</main>
+  ) : (
+    <main className="auth-loading" role="alert">
+      训练记录需要登录后使用；请先配置 CloudBase 或打开测试平台。
+    </main>
+  );
 
   return (
     <>
@@ -286,6 +316,7 @@ export function App({
         <Route path="/onboarding" element={onboardingPage} />
         <Route path="/today" element={todayPage} />
         <Route path="/weight" element={weightPage} />
+        <Route path="/workouts" element={workoutsPage} />
         <Route path="*" element={<WelcomePage />} />
       </Routes>
       <PwaUpdatePrompt />

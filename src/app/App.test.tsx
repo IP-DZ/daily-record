@@ -1,12 +1,13 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { MealEntry, WeightEntry } from '@daily-record/contracts';
+import type { MealEntry, WeightEntry, WorkoutSession } from '@daily-record/contracts';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthPort } from '../platform/auth';
 import type { MealsRepository } from '../platform/meals';
 import type { ProfileSettingsRepository } from '../platform/settings/ProfileSettingsRepository';
 import type { WeightRepository } from '../platform/weight';
+import type { WorkoutsRepository } from '../platform/workouts';
 import { App } from './App';
 
 const localStorageDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
@@ -60,6 +61,16 @@ function createWeightRepository(entries: WeightEntry[] = []): WeightRepository {
     update: vi.fn(),
     delete: vi.fn(),
   } as WeightRepository;
+}
+
+function createWorkoutsRepository(sessions: WorkoutSession[] = []): WorkoutsRepository {
+  return {
+    listByDateRange: vi.fn().mockResolvedValue(sessions),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    copyLatest: vi.fn(),
+  } as WorkoutsRepository;
 }
 
 beforeEach(() => {
@@ -193,6 +204,70 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: '记录体重变化' })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: '70.4 kg' })).toBeInTheDocument();
     expect(weight.listByDateRange).toHaveBeenCalledWith(
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    );
+  });
+
+  it('keeps the workouts route behind the authenticated session', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn().mockResolvedValue(undefined),
+      verifyEmailCode: vi.fn().mockResolvedValue({ userId: 'user-1' }),
+      currentUser: vi.fn().mockResolvedValue(null),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+
+    render(
+      <MemoryRouter initialEntries={['/workouts']}>
+        <App auth={auth} workouts={createWorkoutsRepository()} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '注册或登录' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '记录力量训练' })).not.toBeInTheDocument();
+  });
+
+  it('renders the workouts tool after auth restores and uses the injected workouts repository', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn(),
+      verifyEmailCode: vi.fn(),
+      currentUser: vi.fn().mockResolvedValue({ userId: 'user-workouts' }),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+    const workouts = createWorkoutsRepository([
+      {
+        id: 'workout-route',
+        workoutDate: '2026-07-14',
+        bodyParts: ['胸'],
+        durationMinutes: 60,
+        note: '',
+        volumeKg: 480,
+        exercises: [{
+          id: 'exercise-route',
+          name: '卧推',
+          order: 1,
+          sets: [{
+            id: 'set-route',
+            order: 1,
+            weightKg: 60,
+            reps: 8,
+            completed: true,
+          }],
+        }],
+        createdAt: '2026-07-14T00:00:00.000Z',
+        updatedAt: '2026-07-14T00:00:00.000Z',
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={['/workouts']}>
+        <App auth={auth} workouts={workouts} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '记录力量训练' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '胸 · 60 分钟' })).toBeInTheDocument();
+    expect(workouts.listByDateRange).toHaveBeenCalledWith(
       expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
     );
