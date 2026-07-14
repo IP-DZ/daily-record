@@ -2,15 +2,15 @@
 
 ## 执行元数据
 
-- **Status**：active
-- **Workflow Stage**：code
+- **Status**：executed
+- **Workflow Stage**：review
 - **Created**：2026-07-14
 - **Updated**：2026-07-14
-- **Source Of Truth Until**：图片餐食分析切片完成 code、review、提交、推送，并把证据折回 `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`
+- **Source Of Truth Until**：图片餐食分析切片已完成 code/review，并已进入保护性提交路径；后续状态回到 `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的“图片识别”需求、`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md` 任务 6、用户已批准的方案 A 与大陆网络约束
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：Task 1、Task 2、Task 3、Task 4 已提交推送；Task 5 已完成代码、聚焦验证和 Anvil 审阅，待保护性提交/推送后继续 Task 6：移动 E2E、状态更新与最终审阅。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化先使用固定夹具和 test platform。
+- **Resume Point**：Task 1–6 已完成代码、自动化验证与 Anvil 审阅；本切片交付了图片预处理、AI 分析合约/端口、生产 RLS/RPC、云函数纯处理器、`/photo-meal` 鉴权 UI、移动端照片记餐 E2E 和主计划状态回写，并通过保护性提交 `test: add photo meal e2e coverage` 保护。下一步回到主计划任务 7「营养趋势」，或先按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境后运行真实 CloudBase/视觉模型 manual smoke。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化使用固定图片夹具和 test platform，不伪报真实模型通过。
 
 ## 模块边界
 
@@ -459,6 +459,25 @@ graph TD
   - Modify `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`
   - Modify `docs/anvil/plans/2026-07-14-photo-meal-analysis-plan.md`
   - Add `.ai/anvil/reviews/2026-07-14-photo-meal-analysis-final-review.md`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `tests/e2e/photo-meal.spec.ts`
+  - `src/features/photo-meal/PhotoMealPage.tsx`
+  - `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`
+  - `docs/anvil/plans/2026-07-14-photo-meal-analysis-plan.md`
+  - `.ai/anvil/reviews/2026-07-14-photo-meal-analysis-final-review.md`
+- **Accepted Change Baseline**：
+  - 新增移动端 test-platform E2E：登录 `/photo-meal?test-platform=1`、上传固定 1px PNG 夹具、看到内存模型返回的「番茄炒蛋盖饭」、编辑热量为 650、确认生成正式餐食、通过 SPA 链接进入今日页并断言四项合计变化。
+  - 在照片记餐成功状态中新增「查看今日汇总」SPA 链接，避免 E2E 使用 `page.goto('/today?test-platform=1')` 触发整页重载后 test platform 内存仓库重置；该改动也给真实用户一个确认后的自然返回路径。
+  - 回写本切片和主计划的任务状态、验证证据、真实 CloudBase/模型 smoke blocker 与下一步恢复点。
+- **Verification**：
+  - 环境 RED：沙箱内运行 `pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line tests/e2e/photo-meal.spec.ts` 因 preview server 无法监听 `127.0.0.1:4173` 返回 `listen EPERM`，改为授权运行。
+  - 行为 RED：授权 focused E2E 首次失败，原因是 `page.goto('/today?test-platform=1')` 整页重载导致 in-memory test platform 清空确认后的餐食；修复为 UI 内 SPA 链接后重跑通过。
+  - GREEN focused E2E：`pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line tests/e2e/photo-meal.spec.ts` 通过，1 passed。
+  - 全量静态与构建：`pnpm_config_verify_deps_before_run=warn pnpm lint`、`pnpm_config_verify_deps_before_run=warn pnpm typecheck`、`pnpm_config_verify_deps_before_run=warn pnpm test`、`pnpm_config_verify_deps_before_run=warn pnpm build` 均通过；单元测试为 36 个文件、378 条测试通过；build 仅保留 Vite 大 chunk 非阻塞警告。
+  - 全量移动 E2E：授权运行 `pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line` 通过，5 passed / 1 real CloudBase manual skipped。
+  - `git diff --check` 通过。
+- **Evidence**：最终审阅报告 `.ai/anvil/reviews/2026-07-14-photo-meal-analysis-final-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。真实 CloudBase/视觉模型 smoke 仍 blocked，owner=仓库所有者，next=配置隔离 CloudBase 环境、服务端模型变量和测试图片策略后运行 manual spec。
 - **执行指令**：
   1. 写失败 E2E，使用 test platform route 和内存模型夹具，不使用真实照片、真实邮箱或生产密钥。
   2. 运行 RED：`pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line tests/e2e/photo-meal.spec.ts`。

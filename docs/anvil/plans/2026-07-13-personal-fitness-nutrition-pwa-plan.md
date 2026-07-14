@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`（用户已于 2026-07-13 确认）
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
-- **Resume Point**：任务 4「体重记录与热量反馈」和任务 5「训练记录、复制与容量」已完成合约、领域函数、仓储端口、CloudBase/test platform adapters、`weight/workouts` 迁移/RLS/RPC、体重页、训练页、`/weight` 与 `/workouts` 鉴权路由和移动端 E2E，并已提交推送。当前下一业务切片为任务 6「图片分析、人工确认与失败恢复」，执行来源为 `docs/anvil/plans/2026-07-14-photo-meal-analysis-plan.md`；下一步执行该计划 Task 1（AI 合约与纯领域函数）。最新已提交证据：ESLint、typecheck、29 files / 332 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 4 passed / 1 real CloudBase manual skipped。真实 CloudBase smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境并运行 manual spec。
+- **Resume Point**：任务 4「体重记录与热量反馈」、任务 5「训练记录、复制与容量」和任务 6「图片分析、人工确认与失败恢复」均已完成本地自动化、移动端 E2E、Anvil 审阅、状态回写和保护性提交。任务 6 的细化执行来源为 `docs/anvil/plans/2026-07-14-photo-meal-analysis-plan.md`，已交付图片预处理、AI 分析合约/端口、生产 RLS/RPC、云函数纯处理器、`/photo-meal` 鉴权 UI 和照片记餐确认入账 E2E。最新证据：ESLint、typecheck、36 files / 378 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 5 passed / 1 real CloudBase manual skipped。真实 CloudBase smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境、服务端模型变量和测试图片策略后运行 manual spec。下一业务切片建议执行任务 7「营养趋势」。
 
 ## 交付拆分
 
@@ -338,6 +338,24 @@ graph TD
 - **执行指令**：以容量与复制纯函数测试开工，再接事务与表单。
 
 ### 任务 6：图片分析、人工确认与失败恢复
+- **Code Status**：done（细化计划 `2026-07-14-photo-meal-analysis-plan.md` Task 1–6 已完成并通过最终审阅；真实 CloudBase/视觉模型 smoke 因隔离环境和模型配置缺失保持 blocked）
+- **Actual Write Set**：
+  - `packages/contracts/src/photoMeal.ts`、`packages/contracts/src/photoMeal.test.ts`、`packages/contracts/src/index.ts`
+  - `src/domain/photoMeal/**`
+  - `src/platform/image/**`
+  - `src/platform/photoMeal/**`
+  - `src/platform/cloudbase/CloudBasePhotoMealAnalysisRepository.*`、`src/platform/cloudbase/createCloudBasePlatform.*`、`src/platform/cloudbase/index.ts`
+  - `src/platform/testing/createTestPlatform.*`
+  - `cloud/database/migrations/0004_photo_meal_analysis.sql`
+  - `cloud/functions/meal-photo-analysis/**`
+  - `tests/security/photoMealAnalysisIsolation.test.ts`、`tests/security/migrationShape.test.ts`、`tests/security/pgliteAuthHarness.ts`
+  - `src/features/photo-meal/**`
+  - `src/app/App.tsx`、`src/app/App.test.tsx`
+  - `tests/e2e/photo-meal.spec.ts`
+  - `docs/anvil/plans/2026-07-14-photo-meal-analysis-plan.md`
+  - `.ai/anvil/reviews/2026-07-14-photo-meal-*-review.md`
+- **Verification**：focused contracts/domain、image preprocessing、platform adapters、PGlite isolation/handler、PhotoMeal/App component tests、focused `photo-meal.spec.ts` mobile E2E、全量 `pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、全量 `pnpm test:e2e --project=mobile-chromium --reporter=line`、`git diff --check`
+- **Evidence**：Task 1 contracts/domain：2 files / 20 tests passed，typecheck/lint/diff check passed，审阅 PASS；Task 2 image preprocessing：1 file / 6 tests passed，typecheck/lint/diff check passed，审阅 PASS；Task 3 platform adapters：3 files / 15 tests passed，typecheck/lint/diff check passed，审阅 PASS；Task 4 migration/RLS/RPC/handler：3 files / 13 tests passed，typecheck/lint/diff check passed，审阅 PASS；Task 5 UI/App route：2 files / 20 tests passed，typecheck/lint/diff check passed，审阅 PASS；Task 6 mobile E2E/status/final review：focused `photo-meal.spec.ts` 1 passed，全量 lint/typecheck/unit/build 通过，36 files / 378 Vitest tests passed，全量 `mobile-chromium` E2E 5 passed / 1 real CloudBase manual skipped，最终审阅 `.ai/anvil/reviews/2026-07-14-photo-meal-analysis-final-review.md` 批准。真实 CloudBase/视觉模型 manual smoke 未声明通过，blocker owner=仓库所有者，next=配置隔离 CloudBase 环境、服务端模型变量和测试图片策略后运行 manual spec。
 - **Layer**：4
 - **Parallel Group**：G4A
 - **Execution**：serial
@@ -423,11 +441,11 @@ graph TD
 
 | 门禁 | Code Status | 证据 |
 |---|---|---|
-| 自动化测试 | passed | 332 个 Vitest 测试；2026-07-14 最新 `mobile-chromium` 4 passed / 1 个真实环境 manual skipped |
+| 自动化测试 | passed | 378 个 Vitest 测试；2026-07-14 最新 `mobile-chromium` 5 passed / 1 个真实环境 manual skipped |
 | 类型与静态检查 | passed | 全仓 ESLint、`tsc -b`、`git diff --check` 退出码 0 |
-| PWA 构建 | passed | production build 生成 Manifest、Service Worker 与 Workbox；precache 13 entries |
-| 性能预算 | passed | 入口 JavaScript gzip 105.84 kB，低于 250 KB；CloudBase SDK 为独立动态 chunk |
+| PWA 构建 | passed | production build 生成 Manifest、Service Worker 与 Workbox；Vite 大 chunk 警告为非阻塞，未新增 SW runtime cache |
+| 性能预算 | partial | 本轮 build 通过且未新增首屏必须加载的真实 AI SDK；图片分析与 CloudBase adapter 仍保持动态平台加载。最终大陆网络/LCP 预算归任务 9 统一验收 |
 | 敏感信息与缓存边界 | passed | 生产产物无服务端密钥值、固定测试 OTP/邮箱/端点/test-platform chunk；未新增用户 API runtime caching |
-| 任务级独立审查 | passed | 任务 2 的五个详细子任务、任务 3 的 Task 1–4、体重/训练 Task 1–5 最终均无未解决 Critical/Important |
-| 整分支 Anvil 评审 | passed | 任务 2 整分支评审已批准；任务 3 最终审阅 `.ai/anvil/reviews/2026-07-14-manual-meals-final-review.md` 批准；体重页与训练页审阅分别批准，无未解决 Critical/Important |
-| 后续业务任务 | partial | 任务 2 真实 CloudBase smoke blocked；任务 4/5 已完成本地自动化与移动 E2E 证据，下一业务切片为图片分析或趋势前置 |
+| 任务级独立审查 | passed | 任务 2 的五个详细子任务、任务 3 的 Task 1–4、体重/训练 Task 1–6、图片分析 Task 1–6 最终均无未解决 Critical/Important |
+| 整分支 Anvil 评审 | passed | 任务 2 整分支评审已批准；任务 3 最终审阅 `.ai/anvil/reviews/2026-07-14-manual-meals-final-review.md` 批准；体重页/训练页/图片分析最终审阅均批准，无未解决 Critical/Important |
+| 后续业务任务 | partial | 任务 2 与任务 6 真实 CloudBase/视觉模型 smoke blocked；任务 4/5/6 已完成本地自动化与移动 E2E 证据，下一业务切片建议为任务 7 营养趋势 |

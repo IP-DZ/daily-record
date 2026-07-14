@@ -191,7 +191,17 @@ export function PhotoMealPage({
           />
         </label>
         {isAnalyzing && <p role="status">正在分析照片…</p>}
-        {statusMessage && <p role="status">{statusMessage}</p>}
+        {statusMessage && (
+          <p role="status">
+            {statusMessage}
+            {statusMessage.startsWith('已生成') && (
+              <>
+                {' '}
+                <Link to="/today">查看今日汇总</Link>
+              </>
+            )}
+          </p>
+        )}
         {errorMessage && (
           <p role="alert">
             {errorMessage}
