@@ -21,27 +21,56 @@ describe('production migration security shape', () => {
   });
 
   it('enables RLS and defines all four own-row policies on all user tables', async () => {
+    const userTables = [
+      'profiles',
+      'nutrition_goals',
+      'meals',
+      'weight_entries',
+      'workouts',
+      'workout_exercises',
+      'workout_sets',
+    ];
     const tables = await db.query<{ relname: string; relrowsecurity: boolean }>(`
       SELECT relname, relrowsecurity
       FROM pg_class
       WHERE relnamespace = 'public'::regnamespace
-        AND relname IN ('profiles', 'nutrition_goals', 'meals')
+        AND relname IN (
+          'profiles',
+          'nutrition_goals',
+          'meals',
+          'weight_entries',
+          'workouts',
+          'workout_exercises',
+          'workout_sets'
+        )
       ORDER BY relname
     `);
     expect(tables.rows).toEqual([
       { relname: 'meals', relrowsecurity: true },
       { relname: 'nutrition_goals', relrowsecurity: true },
       { relname: 'profiles', relrowsecurity: true },
+      { relname: 'weight_entries', relrowsecurity: true },
+      { relname: 'workout_exercises', relrowsecurity: true },
+      { relname: 'workout_sets', relrowsecurity: true },
+      { relname: 'workouts', relrowsecurity: true },
     ]);
 
     const policies = await db.query<{ tablename: string; cmd: string; qual: string | null; with_check: string | null }>(`
       SELECT tablename, cmd, qual, with_check
       FROM pg_policies
       WHERE schemaname = 'public'
-        AND tablename IN ('profiles', 'nutrition_goals', 'meals')
+        AND tablename IN (
+          'profiles',
+          'nutrition_goals',
+          'meals',
+          'weight_entries',
+          'workouts',
+          'workout_exercises',
+          'workout_sets'
+        )
       ORDER BY tablename, cmd
     `);
-    for (const table of ['profiles', 'nutrition_goals', 'meals']) {
+    for (const table of userTables) {
       const tablePolicies = Object.fromEntries(
         policies.rows
           .filter(({ tablename }) => tablename === table)
@@ -66,7 +95,15 @@ describe('production migration security shape', () => {
       FROM information_schema.role_table_grants
       WHERE grantee IN ('anon', 'authenticated')
         AND table_schema = 'public'
-        AND table_name IN ('profiles', 'nutrition_goals', 'meals')
+        AND table_name IN (
+          'profiles',
+          'nutrition_goals',
+          'meals',
+          'weight_entries',
+          'workouts',
+          'workout_exercises',
+          'workout_sets'
+        )
     `);
     expect(tablePrivileges.rows).toEqual([]);
 
@@ -75,7 +112,15 @@ describe('production migration security shape', () => {
       FROM information_schema.column_privileges
       WHERE grantee IN ('anon', 'authenticated')
         AND table_schema = 'public'
-        AND table_name IN ('profiles', 'nutrition_goals', 'meals')
+        AND table_name IN (
+          'profiles',
+          'nutrition_goals',
+          'meals',
+          'weight_entries',
+          'workouts',
+          'workout_exercises',
+          'workout_sets'
+        )
     `);
     expect(columnPrivileges.rows).toEqual([]);
   });
@@ -100,11 +145,20 @@ describe('production migration security shape', () => {
           'create_my_meal',
           'update_my_meal',
           'delete_my_meal',
-          'copy_my_meal'
+          'copy_my_meal',
+          'list_my_weight_entries',
+          'create_my_weight_entry',
+          'update_my_weight_entry',
+          'delete_my_weight_entry',
+          'list_my_workouts',
+          'create_my_workout',
+          'update_my_workout',
+          'delete_my_workout',
+          'copy_my_latest_workout'
         )
       ORDER BY p.proname
     `);
-    expect(functions.rows).toHaveLength(7);
+    expect(functions.rows).toHaveLength(16);
     for (const fn of functions.rows) {
       expect(fn.prosecdef).toBe(true);
       expect(fn.proconfig).toContain('search_path=pg_catalog, public, auth');
@@ -122,6 +176,29 @@ describe('production migration security shape', () => {
     expect(functions.rows.find(({ proname }) => proname === 'copy_my_meal')?.arguments).toBe(
       'meal_id uuid, target_meal_date text',
     );
+    expect(functions.rows.find(({ proname }) => proname === 'list_my_weight_entries')?.arguments).toBe(
+      'start_date text, end_date text',
+    );
+    expect(functions.rows.find(({ proname }) => proname === 'create_my_weight_entry')?.arguments).toBe(
+      'payload jsonb',
+    );
+    expect(functions.rows.find(({ proname }) => proname === 'update_my_weight_entry')?.arguments).toBe(
+      'payload jsonb',
+    );
+    expect(functions.rows.find(({ proname }) => proname === 'delete_my_weight_entry')?.arguments).toBe(
+      'entry_id uuid',
+    );
+    expect(functions.rows.find(({ proname }) => proname === 'list_my_workouts')?.arguments).toBe(
+      'start_date text, end_date text',
+    );
+    expect(functions.rows.find(({ proname }) => proname === 'create_my_workout')?.arguments).toBe('payload jsonb');
+    expect(functions.rows.find(({ proname }) => proname === 'update_my_workout')?.arguments).toBe('payload jsonb');
+    expect(functions.rows.find(({ proname }) => proname === 'delete_my_workout')?.arguments).toBe(
+      'workout_id uuid',
+    );
+    expect(functions.rows.find(({ proname }) => proname === 'copy_my_latest_workout')?.arguments).toBe(
+      'target_workout_date text',
+    );
 
     const executePrivileges = await db.query<{ grantee: string; routine_name: string }>(`
       SELECT grantee, routine_name
@@ -134,19 +211,37 @@ describe('production migration security shape', () => {
           'create_my_meal',
           'update_my_meal',
           'delete_my_meal',
-          'copy_my_meal'
+          'copy_my_meal',
+          'list_my_weight_entries',
+          'create_my_weight_entry',
+          'update_my_weight_entry',
+          'delete_my_weight_entry',
+          'list_my_workouts',
+          'create_my_workout',
+          'update_my_workout',
+          'delete_my_workout',
+          'copy_my_latest_workout'
         )
         AND grantee IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
       ORDER BY grantee, routine_name
     `);
     expect(executePrivileges.rows).toEqual([
+      { grantee: 'authenticated', routine_name: 'copy_my_latest_workout' },
       { grantee: 'authenticated', routine_name: 'copy_my_meal' },
       { grantee: 'authenticated', routine_name: 'create_my_meal' },
+      { grantee: 'authenticated', routine_name: 'create_my_weight_entry' },
+      { grantee: 'authenticated', routine_name: 'create_my_workout' },
       { grantee: 'authenticated', routine_name: 'delete_my_meal' },
+      { grantee: 'authenticated', routine_name: 'delete_my_weight_entry' },
+      { grantee: 'authenticated', routine_name: 'delete_my_workout' },
       { grantee: 'authenticated', routine_name: 'list_my_meals_by_date' },
+      { grantee: 'authenticated', routine_name: 'list_my_weight_entries' },
+      { grantee: 'authenticated', routine_name: 'list_my_workouts' },
       { grantee: 'authenticated', routine_name: 'load_my_profile_settings' },
       { grantee: 'authenticated', routine_name: 'save_my_profile_settings' },
       { grantee: 'authenticated', routine_name: 'update_my_meal' },
+      { grantee: 'authenticated', routine_name: 'update_my_weight_entry' },
+      { grantee: 'authenticated', routine_name: 'update_my_workout' },
     ]);
   });
 
@@ -154,9 +249,25 @@ describe('production migration security shape', () => {
     await expect(applyProductionMigration(db)).rejects.toThrow(/already exists/i);
     const shape = await db.query<{ tables: number; policies: number }>(`
       SELECT
-        (SELECT count(*)::int FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relname IN ('profiles', 'nutrition_goals', 'meals')) AS tables,
-        (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'public' AND tablename IN ('profiles', 'nutrition_goals', 'meals')) AS policies
+        (SELECT count(*)::int FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relname IN (
+          'profiles',
+          'nutrition_goals',
+          'meals',
+          'weight_entries',
+          'workouts',
+          'workout_exercises',
+          'workout_sets'
+        )) AS tables,
+        (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'public' AND tablename IN (
+          'profiles',
+          'nutrition_goals',
+          'meals',
+          'weight_entries',
+          'workouts',
+          'workout_exercises',
+          'workout_sets'
+        )) AS policies
     `);
-    expect(shape.rows[0]).toEqual({ tables: 3, policies: 12 });
+    expect(shape.rows[0]).toEqual({ tables: 7, policies: 28 });
   });
 });

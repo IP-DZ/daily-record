@@ -7,6 +7,7 @@ export type SqlClient = Pick<Transaction, 'exec' | 'query'>;
 const migrationUrls = [
   new URL('../../cloud/database/migrations/0001_profiles_and_nutrition_goals.sql', import.meta.url),
   new URL('../../cloud/database/migrations/0002_meals.sql', import.meta.url),
+  new URL('../../cloud/database/migrations/0003_weight_workouts.sql', import.meta.url),
 ];
 
 export async function createAuthTestDatabase(): Promise<PGlite> {
