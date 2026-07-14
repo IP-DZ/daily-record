@@ -1,11 +1,12 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { MealEntry } from '@daily-record/contracts';
+import type { MealEntry, WeightEntry } from '@daily-record/contracts';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthPort } from '../platform/auth';
 import type { MealsRepository } from '../platform/meals';
 import type { ProfileSettingsRepository } from '../platform/settings/ProfileSettingsRepository';
+import type { WeightRepository } from '../platform/weight';
 import { App } from './App';
 
 const localStorageDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
@@ -50,6 +51,15 @@ function createMealsRepository(meals: MealEntry[] = []): MealsRepository {
     delete: vi.fn(),
     copy: vi.fn(),
   } as MealsRepository;
+}
+
+function createWeightRepository(entries: WeightEntry[] = []): WeightRepository {
+  return {
+    listByDateRange: vi.fn().mockResolvedValue(entries),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  } as WeightRepository;
 }
 
 beforeEach(() => {
@@ -136,6 +146,56 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: '今天吃了什么？' })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: '路由餐' })).toBeInTheDocument();
     expect(meals.listByDate).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
+  });
+
+  it('keeps the weight route behind the authenticated session', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn().mockResolvedValue(undefined),
+      verifyEmailCode: vi.fn().mockResolvedValue({ userId: 'user-1' }),
+      currentUser: vi.fn().mockResolvedValue(null),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+
+    render(
+      <MemoryRouter initialEntries={['/weight']}>
+        <App auth={auth} weight={createWeightRepository()} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '注册或登录' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '记录体重变化' })).not.toBeInTheDocument();
+  });
+
+  it('renders the weight tool after auth restores and uses the injected weight repository', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn(),
+      verifyEmailCode: vi.fn(),
+      currentUser: vi.fn().mockResolvedValue({ userId: 'user-weight' }),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+    const weight = createWeightRepository([
+      {
+        id: 'weight-route',
+        entryDate: '2026-07-14',
+        weightKg: 70.4,
+        note: '路由体重',
+        createdAt: '2026-07-14T00:00:00.000Z',
+        updatedAt: '2026-07-14T00:00:00.000Z',
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={['/weight']}>
+        <App auth={auth} weight={weight} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '记录体重变化' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '70.4 kg' })).toBeInTheDocument();
+    expect(weight.listByDateRange).toHaveBeenCalledWith(
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    );
   });
 
   it('shows a recoverable notice when browser storage is unavailable', async () => {

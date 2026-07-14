@@ -3,9 +3,11 @@ import { Link, Route, Routes } from 'react-router-dom';
 import { AuthGate } from '../features/auth';
 import { OnboardingPage } from '../features/onboarding';
 import { TodayPage } from '../features/today';
+import { WeightPage } from '../features/weight';
 import type { AuthPort } from '../platform/auth';
 import type { MealsRepository } from '../platform/meals';
 import type { ProfileSettingsRepository } from '../platform/settings/ProfileSettingsRepository';
+import type { WeightRepository } from '../platform/weight';
 import { readCloudBasePublicConfig } from '../platform/cloudbase/cloudBaseConfig';
 import type { CloudBasePublicConfig } from '../platform/cloudbase/cloudBaseConfig';
 import {
@@ -43,6 +45,7 @@ interface AppProps {
   auth?: AuthPort;
   profileSettings?: ProfileSettingsRepository;
   meals?: MealsRepository;
+  weight?: WeightRepository;
   cloudBaseEnv?: Readonly<Record<string, string | boolean | undefined>>;
   platformLoader?: PlatformLoader;
 }
@@ -51,6 +54,7 @@ type Platform = {
   auth: AuthPort;
   profileSettings: ProfileSettingsRepository;
   meals: MealsRepository;
+  weight: WeightRepository;
 };
 type PlatformLoader = (config: CloudBasePublicConfig) => Promise<Platform>;
 const TEST_PLATFORM_CONFIG: CloudBasePublicConfig = {
@@ -68,6 +72,7 @@ export function App({
   auth: injectedAuth,
   profileSettings: injectedProfileSettings,
   meals: injectedMeals,
+  weight: injectedWeight,
   cloudBaseEnv = import.meta.env,
   platformLoader = defaultPlatformLoader,
 }: AppProps = {}) {
@@ -125,12 +130,14 @@ export function App({
     auth: AuthPort | null;
     profileSettings: ProfileSettingsRepository | null;
     meals: MealsRepository | null;
+    weight: WeightRepository | null;
   }>(() => ({
     config: publicConfig,
     status: publicConfig === null ? 'idle' : 'loading',
     auth: null,
     profileSettings: null,
     meals: null,
+    weight: null,
   }));
   const [loadAttempt, setLoadAttempt] = useState(0);
 
@@ -144,6 +151,7 @@ export function App({
       auth: null,
       profileSettings: null,
       meals: null,
+      weight: null,
     });
     void selectedPlatformLoader(publicConfig)
       .then((platform) => {
@@ -153,6 +161,7 @@ export function App({
           auth: platform.auth,
           profileSettings: platform.profileSettings,
           meals: platform.meals,
+          weight: platform.weight,
         });
       })
       .catch(() => {
@@ -162,6 +171,7 @@ export function App({
           auth: null,
           profileSettings: null,
           meals: null,
+          weight: null,
         });
       });
     return () => {
@@ -177,10 +187,12 @@ export function App({
       auth: null,
       profileSettings: null,
       meals: null,
+      weight: null,
     };
   const auth = injectedAuth ?? currentPlatformState.auth;
   const profileSettings = injectedProfileSettings ?? currentPlatformState.profileSettings;
   const meals = injectedMeals ?? currentPlatformState.meals;
+  const weight = injectedWeight ?? currentPlatformState.weight;
   const configurationMissing = injectedAuth === undefined
     && !testPlatformRequested
     && publicConfig === null;
@@ -243,6 +255,24 @@ export function App({
       今日记录需要登录后使用；请先配置 CloudBase 或打开测试平台。
     </main>
   );
+  const weightPage = auth !== null && weight !== null ? (
+    <AuthGate auth={auth}>
+      <WeightPage weight={weight} />
+    </AuthGate>
+  ) : publicConfig !== null && currentPlatformState.status === 'error' ? (
+    <main className="auth-loading">
+      <p role="alert">认证服务加载失败，请稍后重试。</p>
+      <button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>
+        重新连接
+      </button>
+    </main>
+  ) : publicConfig !== null ? (
+    <main className="auth-loading" role="status">正在连接认证服务…</main>
+  ) : (
+    <main className="auth-loading" role="alert">
+      体重记录需要登录后使用；请先配置 CloudBase 或打开测试平台。
+    </main>
+  );
 
   return (
     <>
@@ -255,6 +285,7 @@ export function App({
         <Route path="/" element={<WelcomePage />} />
         <Route path="/onboarding" element={onboardingPage} />
         <Route path="/today" element={todayPage} />
+        <Route path="/weight" element={weightPage} />
         <Route path="*" element={<WelcomePage />} />
       </Routes>
       <PwaUpdatePrompt />

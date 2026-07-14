@@ -1,0 +1,201 @@
+.weight-page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 24px 16px 40px;
+  color: #17201b;
+  background: #f7faf7;
+}
+
+.weight-page *,
+.weight-page *::before,
+.weight-page *::after {
+  box-sizing: border-box;
+}
+
+.weight-header,
+.weight-panel,
+.weight-form,
+.weight-list,
+.weight-message,
+.weight-error {
+  width: min(100%, 720px);
+  margin: 0 auto 16px;
+}
+
+.weight-header h1 {
+  margin: 4px 0 8px;
+  font-size: clamp(2rem, 12vw, 3rem);
+  line-height: 1.05;
+}
+
+.weight-header p {
+  margin: 0;
+  color: #4d5d53;
+}
+
+.weight-eyebrow {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #1f7a4f;
+}
+
+.weight-panel,
+.weight-form,
+.weight-list,
+.weight-card {
+  border: 1px solid #dce7df;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(35, 66, 48, 0.08);
+}
+
+.weight-panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.weight-panel p,
+.weight-panel span {
+  margin: 0;
+  color: #4d5d53;
+}
+
+.weight-panel strong {
+  display: block;
+  margin-top: 4px;
+  color: #173b28;
+}
+
+.weight-note {
+  border-radius: 14px;
+  padding: 12px;
+  background: #edf8f0;
+}
+
+.weight-message,
+.weight-error {
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.weight-message {
+  color: #24533a;
+  background: #eaf7ef;
+}
+
+.weight-error {
+  color: #7d1a1a;
+  background: #ffeded;
+}
+
+.weight-form,
+.weight-list {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.weight-form h2,
+.weight-list h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.weight-form label {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.weight-form input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #cbd8cf;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.weight-form button,
+.weight-card button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.weight-form-actions,
+.weight-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.weight-form button {
+  color: #fff;
+  background: #1f7a4f;
+}
+
+.weight-card button {
+  color: #1f7a4f;
+  background: #eaf7ef;
+}
+
+.weight-form .secondary-action {
+  color: #1f7a4f;
+  background: #eaf7ef;
+}
+
+.weight-card .danger-action {
+  color: #8a1f1f;
+  background: #ffefef;
+}
+
+.weight-empty {
+  margin: 0;
+  color: #6b7c71;
+}
+
+.weight-cards {
+  display: grid;
+  gap: 12px;
+}
+
+.weight-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  box-shadow: none;
+}
+
+.weight-card h3,
+.weight-card p {
+  margin: 0 0 4px;
+}
+
+.weight-card p {
+  color: #4d5d53;
+}
+
+@media (min-width: 640px) {
+  .weight-page {
+    padding: 36px 24px 56px;
+  }
+
+  .weight-panel {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .weight-note {
+    grid-column: 1 / -1;
+  }
+
+  .weight-card {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}
