@@ -5,12 +5,12 @@
 - **Status**：active
 - **Workflow Stage**：plan
 - **Created**：2026-07-13
-- **Updated**：2026-07-13
+- **Updated**：2026-07-14
 - **Source Of Truth Until**：本计划被执行完毕、被新版计划取代或被明确放弃
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`（用户已于 2026-07-13 确认）
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
-- **Resume Point**：任务 2 已通过整分支 Anvil 终审：`authenticated` 无直接表权限，只能调用绑定 `auth.uid()` 的严格 `SECURITY DEFINER` RPC，六项目标均与 JavaScript `finite()` 上限一致；focused PGlite 权限套件 44/44、全仓 237/237 与移动 E2E 2 passed / 1 manual skipped 通过。下一步为创建保护性提交并推送；真实 CloudBase smoke 保持环境 blocker，后续业务开发从任务 3 开始。
+- **Resume Point**：任务 3「今日页与手动饮食闭环」已完成合约、领域汇总、CloudBase/test platform 餐食端口、`meals` 迁移/RLS/RPC、今日页 UI 与移动端 E2E；Task 1–4 已通过独立审阅并提交，Task 5 E2E、状态更新和最终审阅已完成但仍需纳入最终保护性提交。最新证据：ESLint、typecheck、21 files / 273 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 3 passed / 1 real CloudBase manual skipped，新增 manual spec 单独复跑 1 passed。下一步为提交并推送；真实 CloudBase smoke 仍保持环境 blocker。
 
 ## 交付拆分
 
@@ -281,6 +281,10 @@ graph TD
 - **阶段证据**：合约、CloudBase 适配器、PGlite RLS、认证 UI 与资料同步/E2E 五个详细子任务均通过独立评审；安全修复后整分支为 237 个 Vitest 测试；2026-07-14 最新移动 E2E 为 2 个通过 / 1 个真实环境手工 spec 跳过。真实邮箱 OTP、CloudBase 双连接并发 smoke 因尚未配置隔离环境而未声明通过。
 
 ### 任务 3：今日页与手动饮食闭环
+- **Code Status**：done（合约、领域汇总、仓储端口、CloudBase RPC adapter、`meals` 生产迁移/RLS/RPC、今日页 UI、路由接入和移动端手动记餐 E2E 已实现；真实 CloudBase 环境 smoke 仍随任务 2 blocker 保持 blocked）
+- **Actual Write Set**：`packages/contracts/src/meals.ts`、`packages/contracts/src/index.ts`、`src/domain/meals/**`、`src/platform/meals/**`、`src/platform/cloudbase/CloudBaseMealsRepository.*`、`src/platform/cloudbase/createCloudBasePlatform.ts`、`src/platform/cloudbase/index.ts`、`src/platform/testing/createTestPlatform.*`、`cloud/database/migrations/0002_meals.sql`、`tests/security/mealIsolation.test.ts`、`tests/security/migrationShape.test.ts`、`tests/security/pgliteAuthHarness.ts`、`src/features/today/**`、`src/app/App.tsx`、`src/app/App.test.tsx`、`tests/e2e/manual-meals.spec.ts`、Task 3 细化计划、审阅报告与本状态段
+- **Verification**：focused contracts/domain tests、repository adapter tests、PGlite isolation tests、Today/App component tests、`mobile-chromium` E2E、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`git diff --check`
+- **Evidence**：Task 1 contracts/domain：2 files / 36 tests passed，typecheck passed，审阅 PASS；Task 2 meal repositories：2 files / 9 focused tests passed，createCloudBasePlatform tests passed，typecheck passed，审阅 PASS（仅记录 `meals` 非枚举兼容性 Minor）；Task 3 migration/isolation：2 files / 22 tests passed，适配器 RPC 参数修复后复审 PASS；Task 4 Today UI：2 files / 16 tests passed，lint/typecheck/diff check passed，初审发现编辑中切换日期可能保存到错误日期，新增 RED 回归并在日期变化时 `resetForm()` 后复审 PASS；Task 5 mobile E2E：`mobile-chromium` 3 passed / 1 real CloudBase manual skipped，覆盖 `/today?test-platform=1` 登录、新增鸡胸饭、四项合计精确展示、删除回零和空状态。
 - **Layer**：3
 - **Parallel Group**：G3A
 - **Execution**：serial
@@ -411,11 +415,11 @@ graph TD
 
 | 门禁 | Code Status | 证据 |
 |---|---|---|
-| 自动化测试 | passed | 237 个 Vitest 测试；2026-07-14 最新 `mobile-chromium` 2 passed / 1 个真实环境 manual skipped |
+| 自动化测试 | passed | 273 个 Vitest 测试；2026-07-14 最新 `mobile-chromium` 3 passed / 1 个真实环境 manual skipped |
 | 类型与静态检查 | passed | 全仓 ESLint、`tsc -b`、`git diff --check` 退出码 0 |
 | PWA 构建 | passed | production build 生成 Manifest、Service Worker 与 Workbox；precache 13 entries |
-| 性能预算 | passed | 入口 JavaScript gzip 100.87 kB，低于 250 KB；CloudBase SDK 为独立动态 chunk |
+| 性能预算 | passed | 入口 JavaScript gzip 102.63 kB，低于 250 KB；CloudBase SDK 为独立动态 chunk |
 | 敏感信息与缓存边界 | passed | 生产产物无服务端密钥值、固定测试 OTP/邮箱/端点/test-platform chunk；未新增用户 API runtime caching |
-| 任务级独立审查 | passed | 任务 2 的五个详细子任务最终均无 Critical/Important |
-| 整分支 Anvil 评审 | passed | `.ai/anvil/reviews/2026-07-13-cloudbase-auth-isolation-review.md` 批准；无未解决 Critical/Important |
-| 后续业务任务 | partial | 任务 2 真实 CloudBase smoke blocked；下一开发切片为任务 3 |
+| 任务级独立审查 | passed | 任务 2 的五个详细子任务与任务 3 的 Task 1–4 最终均无未解决 Critical/Important |
+| 整分支 Anvil 评审 | passed | 任务 2 整分支评审已批准；任务 3 最终审阅 `.ai/anvil/reviews/2026-07-14-manual-meals-final-review.md` 批准，无未解决 Critical/Important |
+| 后续业务任务 | partial | 任务 2 真实 CloudBase smoke blocked；任务 3 已完成本地自动化证据，下一业务切片为体重/训练或图片分析前置 |
