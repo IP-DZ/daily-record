@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`（用户已于 2026-07-13 确认）
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
-- **Resume Point**：任务 4「体重记录与热量反馈」、任务 5「训练记录、复制与容量」和任务 6「图片分析、人工确认与失败恢复」均已完成本地自动化、移动端 E2E、Anvil 审阅、状态回写和保护性提交。任务 6 的细化执行来源为 `docs/anvil/plans/2026-07-14-photo-meal-analysis-plan.md`，已交付图片预处理、AI 分析合约/端口、生产 RLS/RPC、云函数纯处理器、`/photo-meal` 鉴权 UI 和照片记餐确认入账 E2E。最新证据：ESLint、typecheck、36 files / 378 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 5 passed / 1 real CloudBase manual skipped。真实 CloudBase smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境、服务端模型变量和测试图片策略后运行 manual spec。下一业务切片建议执行任务 7「营养趋势」。
+- **Resume Point**：任务 4「体重记录与热量反馈」、任务 5「训练记录、复制与容量」和任务 6「图片分析、人工确认与失败恢复」均已完成本地自动化、移动端 E2E、Anvil 审阅、状态回写、保护性提交和 GitHub 推送。任务 6 的细化执行来源为 `docs/anvil/plans/2026-07-14-photo-meal-analysis-plan.md`，已交付图片预处理、AI 分析合约/端口、生产 RLS/RPC、云函数纯处理器、`/photo-meal` 鉴权 UI 和照片记餐确认入账 E2E。最新证据：ESLint、typecheck、36 files / 378 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 5 passed / 1 real CloudBase manual skipped；GitHub 分支 `feature/cloudbase-auth` 已推送到 `aa28fcfd`。真实 CloudBase smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境、服务端模型变量和测试图片策略后运行 manual spec。当前下一业务切片为任务 7「营养趋势」，执行来源为 `docs/anvil/plans/2026-07-14-nutrition-trends-plan.md`；下一步执行该计划 Task 1（目标历史合约与趋势领域函数）。
 
 ## 交付拆分
 
@@ -371,6 +371,8 @@ graph TD
 - **执行指令**：模型测试使用固定夹具；真实模型仅做受控 smoke，不进入常规测试。
 
 ### 任务 7：营养趋势
+- **Code Status**：active（细化计划已创建：`docs/anvil/plans/2026-07-14-nutrition-trends-plan.md`；下一步执行 Task 1）
+- **Planning Note**：主计划原先写“只读取已稳定餐次接口”，但成功标准要求跨目标版本按日期取正确目标；细化计划补入目标历史读模型、迁移/RPC 和平台端口作为串行前置。
 - **Layer**：4
 - **Parallel Group**：G4B
 - **Execution**：parallel
