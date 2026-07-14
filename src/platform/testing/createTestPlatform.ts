@@ -1,18 +1,29 @@
 import {
   authUserSchema,
+  createMealInputSchema,
+  mealEntrySchema,
   profileSettingsSchema,
+  updateMealInputSchema,
   type AuthUser,
+  type MealEntry,
   type ProfileSettingsDraft,
   type ProfileSettingsPayload,
 } from '@daily-record/contracts';
 
+import { summarizeMeals } from '../../domain/meals';
 import type { AuthPort } from '../auth';
+import type { MealsRepository } from '../meals';
 import type { ProfileSettingsRepository } from '../settings/ProfileSettingsRepository';
 
 const ENDPOINT = '/__daily-record-test-platform';
 const CLIENT_KEY = 'daily-record:test-platform-client';
 
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+type TestPlatform = {
+  auth: AuthPort;
+  profileSettings: ProfileSettingsRepository;
+  meals: MealsRepository;
+};
 
 function toDraft(value: ProfileSettingsPayload): ProfileSettingsDraft {
   return {
@@ -45,10 +56,37 @@ async function call(
   return response.json();
 }
 
-export function createTestPlatform(fetcher: Fetcher = fetch): {
-  auth: AuthPort;
-  profileSettings: ProfileSettingsRepository;
-} {
+function assertMealDate(mealDate: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(mealDate)) {
+    throw new Error('Invalid meal date');
+  }
+  return mealDate;
+}
+
+export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
+  const mealsByUserId = new Map<string, MealEntry[]>();
+  let nextMealId = 1;
+
+  async function requireCurrentUserId(): Promise<string> {
+    const response = await call(fetcher, 'current-user') as { user?: unknown };
+    if (response.user === null || response.user === undefined) {
+      throw new Error('Test platform requires an authenticated user');
+    }
+    return authUserSchema.parse(response.user).userId;
+  }
+
+  function userMeals(userId: string): MealEntry[] {
+    const existing = mealsByUserId.get(userId);
+    if (existing !== undefined) return existing;
+    const created: MealEntry[] = [];
+    mealsByUserId.set(userId, created);
+    return created;
+  }
+
+  function timestamp(): string {
+    return new Date().toISOString();
+  }
+
   const auth: AuthPort = {
     async requestEmailCode(email) {
       try {
@@ -82,6 +120,70 @@ export function createTestPlatform(fetcher: Fetcher = fetch): {
     },
   };
 
+  const meals: MealsRepository = {
+    async listByDate(mealDate) {
+      const userId = await requireCurrentUserId();
+      const date = assertMealDate(mealDate);
+      const mealsForDate = userMeals(userId).filter((meal) => meal.mealDate === date);
+      return {
+        meals: mealsForDate.map((meal) => mealEntrySchema.parse(meal)),
+        totals: summarizeMeals(mealsForDate),
+      };
+    },
+    async create(input) {
+      const userId = await requireCurrentUserId();
+      const parsed = createMealInputSchema.parse(input);
+      const now = timestamp();
+      const meal = mealEntrySchema.parse({
+        id: `test-meal-${nextMealId++}`,
+        ...parsed,
+        createdAt: now,
+        updatedAt: now,
+      });
+      userMeals(userId).push(meal);
+      return meal;
+    },
+    async update(input) {
+      const userId = await requireCurrentUserId();
+      const parsed = updateMealInputSchema.parse(input);
+      const mealsForUser = userMeals(userId);
+      const index = mealsForUser.findIndex((meal) => meal.id === parsed.id);
+      if (index < 0) throw new Error('Meal not found');
+      const updated = mealEntrySchema.parse({
+        ...mealsForUser[index],
+        ...parsed,
+        updatedAt: timestamp(),
+      });
+      mealsForUser[index] = updated;
+      return updated;
+    },
+    async delete(id) {
+      const userId = await requireCurrentUserId();
+      const mealsForUser = userMeals(userId);
+      const index = mealsForUser.findIndex((meal) => meal.id === id);
+      if (index < 0) throw new Error('Meal not found');
+      mealsForUser.splice(index, 1);
+    },
+    async copy(id, mealDate) {
+      const userId = await requireCurrentUserId();
+      const date = assertMealDate(mealDate);
+      const source = userMeals(userId).find((meal) => meal.id === id);
+      if (source === undefined) throw new Error('Meal not found');
+      const now = timestamp();
+      const copied = mealEntrySchema.parse({
+        id: `test-meal-${nextMealId++}`,
+        mealDate: date,
+        name: source.name,
+        amount: source.amount,
+        nutrition: source.nutrition,
+        createdAt: now,
+        updatedAt: now,
+      });
+      userMeals(userId).push(copied);
+      return copied;
+    },
+  };
+
   const profileSettings: ProfileSettingsRepository = {
     async load(): Promise<ProfileSettingsDraft | null> {
       const response = await call(fetcher, 'load-profile') as { value?: unknown };
@@ -95,5 +197,5 @@ export function createTestPlatform(fetcher: Fetcher = fetch): {
     },
   };
 
-  return { auth, profileSettings };
+  return { auth, profileSettings, meals };
 }

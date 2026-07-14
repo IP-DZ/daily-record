@@ -7,10 +7,14 @@ import {
   CloudBaseProfileSettingsRepository,
   type CloudBaseRdbClient,
 } from './CloudBaseProfileSettingsRepository';
+import {
+  CloudBaseMealsRepository,
+  type CloudBaseMealsRdbClient,
+} from './CloudBaseMealsRepository';
 
 interface CloudBaseApp {
   auth: CloudBaseAuthClient;
-  rdb(): CloudBaseRdbClient;
+  rdb(): CloudBaseRdbClient & CloudBaseMealsRdbClient;
 }
 
 interface CloudBaseSdk {
@@ -25,6 +29,7 @@ interface CloudBaseSdk {
 export function createCloudBasePlatform(config: CloudBasePublicConfig): {
   auth: CloudBaseAuthAdapter;
   profileSettings: CloudBaseProfileSettingsRepository;
+  meals: CloudBaseMealsRepository;
 } {
   const cloudbase = cloudbaseModule as unknown as CloudBaseSdk;
   const app = cloudbase.init({
@@ -35,8 +40,17 @@ export function createCloudBasePlatform(config: CloudBasePublicConfig): {
   });
   const rdb = app.rdb();
 
-  return {
+  const platform = {
     auth: new CloudBaseAuthAdapter(app.auth),
     profileSettings: new CloudBaseProfileSettingsRepository(rdb),
+  } as {
+    auth: CloudBaseAuthAdapter;
+    profileSettings: CloudBaseProfileSettingsRepository;
+    meals: CloudBaseMealsRepository;
   };
+  Object.defineProperty(platform, 'meals', {
+    value: new CloudBaseMealsRepository(rdb),
+    enumerable: false,
+  });
+  return platform;
 }
