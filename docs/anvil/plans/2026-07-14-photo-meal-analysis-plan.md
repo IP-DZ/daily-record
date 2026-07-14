@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的“图片识别”需求、`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md` 任务 6、用户已批准的方案 A 与大陆网络约束
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：Task 1 已完成代码、聚焦验证和 Anvil 审阅，待保护性提交/推送后继续 Task 2：浏览器图片预处理端口。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化先使用固定夹具和 test platform。
+- **Resume Point**：Task 1 已提交推送；Task 2 已完成代码、聚焦验证和 Anvil 审阅，待保护性提交/推送后继续 Task 3：PhotoMeal 平台端口与 CloudBase/test adapters。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化先使用固定夹具和 test platform。
 
 ## 模块边界
 
@@ -269,6 +269,23 @@ graph TD
   - Create `src/platform/image/prepareMealPhoto.ts`
   - Create `src/platform/image/prepareMealPhoto.test.ts`
   - Create `src/platform/image/index.ts`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `src/platform/image/prepareMealPhoto.ts`
+  - `src/platform/image/prepareMealPhoto.test.ts`
+  - `src/platform/image/index.ts`
+- **Accepted Change Baseline**：
+  - 新增 `prepareMealPhoto(file, options)`，默认最长边 1600 px、输出 ≤ 1.5 MB、优先 WebP、质量 0.82。
+  - 新增可注入 `MealPhotoImageAdapter` 和 `readAsDataUrl`，测试不依赖真实相机、canvas 或网络；默认浏览器实现使用 `FileReader`、`Image`、`canvas`。
+  - 新增 `PrepareMealPhotoError` 稳定错误码；错误信息不包含本地路径或图片 data URL。
+  - 输出再次通过 `preparedMealPhotoSchema` 校验，包含 data URL、mime、size、width、height、去路径化 `originalName`。
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/platform/image/prepareMealPhoto.test.ts` 先因 `./prepareMealPhoto` 不存在失败。
+  - GREEN：同命令通过，1 个测试文件、6 条测试通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `git diff --check` 通过。
+- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-14-photo-meal-image-preprocessing-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。
 - **执行指令**：
   1. 写失败测试，使用注入的 fake image/canvas adapters，覆盖 JPEG/PNG 输入、最长边压缩、输出大小限制、非图片拒绝和安全错误。
   2. 运行 RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/platform/image/prepareMealPhoto.test.ts`。
