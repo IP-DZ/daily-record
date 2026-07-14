@@ -164,11 +164,12 @@ describe('production migration security shape', () => {
           'create_my_photo_meal_analysis',
           'get_my_photo_meal_analysis',
           'confirm_my_photo_meal_analysis',
-          'discard_my_photo_meal_analysis'
+          'discard_my_photo_meal_analysis',
+          'list_my_nutrition_goals_by_date_range'
         )
       ORDER BY p.proname
     `);
-    expect(functions.rows).toHaveLength(20);
+    expect(functions.rows).toHaveLength(21);
     for (const fn of functions.rows) {
       expect(fn.prosecdef).toBe(true);
       expect(fn.proconfig).toContain('search_path=pg_catalog, public, auth');
@@ -185,6 +186,9 @@ describe('production migration security shape', () => {
     expect(functions.rows.find(({ proname }) => proname === 'delete_my_meal')?.arguments).toBe('meal_id uuid');
     expect(functions.rows.find(({ proname }) => proname === 'copy_my_meal')?.arguments).toBe(
       'meal_id uuid, target_meal_date text',
+    );
+    expect(functions.rows.find(({ proname }) => proname === 'list_my_nutrition_goals_by_date_range')?.arguments).toBe(
+      'start_date text, end_date text',
     );
     expect(functions.rows.find(({ proname }) => proname === 'list_my_weight_entries')?.arguments).toBe(
       'start_date text, end_date text',
@@ -246,7 +250,8 @@ describe('production migration security shape', () => {
           'create_my_photo_meal_analysis',
           'get_my_photo_meal_analysis',
           'confirm_my_photo_meal_analysis',
-          'discard_my_photo_meal_analysis'
+          'discard_my_photo_meal_analysis',
+          'list_my_nutrition_goals_by_date_range'
         )
         AND grantee IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
       ORDER BY grantee, routine_name
@@ -265,6 +270,7 @@ describe('production migration security shape', () => {
       { grantee: 'authenticated', routine_name: 'discard_my_photo_meal_analysis' },
       { grantee: 'authenticated', routine_name: 'get_my_photo_meal_analysis' },
       { grantee: 'authenticated', routine_name: 'list_my_meals_by_date' },
+      { grantee: 'authenticated', routine_name: 'list_my_nutrition_goals_by_date_range' },
       { grantee: 'authenticated', routine_name: 'list_my_weight_entries' },
       { grantee: 'authenticated', routine_name: 'list_my_workouts' },
       { grantee: 'authenticated', routine_name: 'load_my_profile_settings' },

@@ -211,6 +211,33 @@ graph TD
   - Modify `src/platform/cloudbase/index.ts`
   - Modify `src/platform/testing/createTestPlatform.ts`
   - Modify `src/platform/testing/createTestPlatform.test.ts`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `cloud/database/migrations/0005_nutrition_goal_history.sql`
+  - `tests/security/nutritionGoalHistoryIsolation.test.ts`
+  - `tests/security/migrationShape.test.ts`
+  - `tests/security/pgliteAuthHarness.ts`
+  - `src/platform/nutritionGoals/NutritionGoalsRepository.ts`
+  - `src/platform/nutritionGoals/index.ts`
+  - `src/platform/cloudbase/CloudBaseNutritionGoalsRepository.test.ts`
+  - `src/platform/cloudbase/CloudBaseNutritionGoalsRepository.ts`
+  - `src/platform/cloudbase/createCloudBasePlatform.ts`
+  - `src/platform/cloudbase/createCloudBasePlatform.test.ts`
+  - `src/platform/cloudbase/index.ts`
+  - `src/platform/testing/createTestPlatform.ts`
+  - `src/platform/testing/createTestPlatform.test.ts`
+- **Accepted Change Baseline**：
+  - 新增 `nutrition_goals.effective_date`、按用户/生效日期索引和 auth-only definer RPC `list_my_nutrition_goals_by_date_range(start_date, end_date)`；RPC 返回当前用户在范围内的目标版本，并包含覆盖起始日前的最近版本。
+  - 新增 `NutritionGoalsRepository` 端口和 `CloudBaseNutritionGoalsRepository`；客户端只传 `start_date/end_date`，不传 `userId`，provider 错误统一映射为 `NutritionGoalsRepositoryError`。
+  - `createCloudBasePlatform` 非枚举暴露 `nutritionGoals`，继续隐藏 raw SDK/RDB。
+  - test platform 在已登录 profile save 时记录每用户隔离的内存目标历史；未登录 legacy payload 检查不写用户历史。
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/nutritionGoalHistoryIsolation.test.ts tests/security/migrationShape.test.ts src/platform/cloudbase/CloudBaseNutritionGoalsRepository.test.ts src/platform/cloudbase/createCloudBasePlatform.test.ts src/platform/testing/createTestPlatform.test.ts` 先因 `effective_date`、`list_my_nutrition_goals_by_date_range`、`CloudBaseNutritionGoalsRepository` 和 `platform.nutritionGoals` 不存在失败。
+  - GREEN：同命令通过，5 个测试文件、22 条测试通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `git diff --check` 通过。
+- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-14-nutrition-trends-platform-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。
 - **执行指令**：
   1. 写 RED：PGlite 验证 `list_my_nutrition_goals_by_date_range` 只返回当前用户、包含起始日前最近版本、拒绝坏日期/反向日期；平台测试断言 CloudBase RPC 参数和错误脱敏。
   2. 运行 RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/nutritionGoalHistoryIsolation.test.ts tests/security/migrationShape.test.ts src/platform/cloudbase/CloudBaseNutritionGoalsRepository.test.ts src/platform/testing/createTestPlatform.test.ts`。

@@ -17,6 +17,7 @@ vi.mock('@cloudbase/js-sdk', () => ({
 }));
 
 import { CloudBaseAuthAdapter } from './CloudBaseAuthAdapter';
+import { CloudBaseNutritionGoalsRepository } from './CloudBaseNutritionGoalsRepository';
 import { CloudBasePhotoMealAnalysisRepository } from './CloudBasePhotoMealAnalysisRepository';
 import { createCloudBasePlatform } from './createCloudBasePlatform';
 
@@ -60,6 +61,7 @@ describe('createCloudBasePlatform', () => {
     expect(Object.keys(platform)).toEqual(['auth', 'profileSettings']);
     expect(platform).not.toHaveProperty('sdk');
     expect(platform).not.toHaveProperty('rdb');
+    expect(platform.nutritionGoals).toBeInstanceOf(CloudBaseNutritionGoalsRepository);
     expect(platform.photoMeals).toBeInstanceOf(CloudBasePhotoMealAnalysisRepository);
     expect(sdk.rdb).toHaveBeenCalledTimes(1);
 

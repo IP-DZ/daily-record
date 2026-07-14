@@ -20,6 +20,10 @@ import {
   type CloudBaseWorkoutsRdbClient,
 } from './CloudBaseWorkoutsRepository';
 import {
+  CloudBaseNutritionGoalsRepository,
+  type CloudBaseNutritionGoalsRdbClient,
+} from './CloudBaseNutritionGoalsRepository';
+import {
   CloudBasePhotoMealAnalysisRepository,
   type CloudBasePhotoMealFunctionClient,
 } from './CloudBasePhotoMealAnalysisRepository';
@@ -30,7 +34,8 @@ interface CloudBaseApp {
   rdb(): CloudBaseRdbClient
     & CloudBaseMealsRdbClient
     & CloudBaseWeightRdbClient
-    & CloudBaseWorkoutsRdbClient;
+    & CloudBaseWorkoutsRdbClient
+    & CloudBaseNutritionGoalsRdbClient;
 }
 
 interface CloudBaseSdk {
@@ -48,6 +53,7 @@ export function createCloudBasePlatform(config: CloudBasePublicConfig): {
   meals: CloudBaseMealsRepository;
   weight: CloudBaseWeightRepository;
   workouts: CloudBaseWorkoutsRepository;
+  nutritionGoals: CloudBaseNutritionGoalsRepository;
   photoMeals: CloudBasePhotoMealAnalysisRepository;
 } {
   const cloudbase = cloudbaseModule as unknown as CloudBaseSdk;
@@ -68,6 +74,7 @@ export function createCloudBasePlatform(config: CloudBasePublicConfig): {
     meals: CloudBaseMealsRepository;
     weight: CloudBaseWeightRepository;
     workouts: CloudBaseWorkoutsRepository;
+    nutritionGoals: CloudBaseNutritionGoalsRepository;
     photoMeals: CloudBasePhotoMealAnalysisRepository;
   };
   Object.defineProperty(platform, 'meals', {
@@ -80,6 +87,10 @@ export function createCloudBasePlatform(config: CloudBasePublicConfig): {
   });
   Object.defineProperty(platform, 'workouts', {
     value: new CloudBaseWorkoutsRepository(rdb),
+    enumerable: false,
+  });
+  Object.defineProperty(platform, 'nutritionGoals', {
+    value: new CloudBaseNutritionGoalsRepository(rdb),
     enumerable: false,
   });
   Object.defineProperty(platform, 'photoMeals', {

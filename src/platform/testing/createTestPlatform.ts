@@ -7,6 +7,7 @@ import {
   createWorkoutInputSchema,
   mealEntrySchema,
   photoMealAnalysisSchema,
+  nutritionGoalVersionSchema,
   profileSettingsSchema,
   updateMealInputSchema,
   updateWeightEntryInputSchema,
@@ -19,6 +20,7 @@ import {
   type PhotoMealCandidate,
   type ProfileSettingsDraft,
   type ProfileSettingsPayload,
+  type NutritionGoalVersion,
   type WeightEntry,
   type WorkoutSession,
 } from '@daily-record/contracts';
@@ -28,6 +30,7 @@ import { candidateToMealInput } from '../../domain/photoMeal';
 import { calculateWorkoutVolume } from '../../domain/workouts';
 import type { AuthPort } from '../auth';
 import type { MealsRepository } from '../meals';
+import type { NutritionGoalsRepository } from '../nutritionGoals';
 import type { PhotoMealAnalysisRepository } from '../photoMeal';
 import type { ProfileSettingsRepository } from '../settings/ProfileSettingsRepository';
 import type { WeightRepository } from '../weight';
@@ -44,6 +47,7 @@ type TestPlatform = {
   weight: WeightRepository;
   workouts: WorkoutsRepository;
   photoMeals: PhotoMealAnalysisRepository;
+  nutritionGoals: NutritionGoalsRepository;
 };
 
 function toDraft(value: ProfileSettingsPayload): ProfileSettingsDraft {
@@ -96,6 +100,7 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
   const weightByUserId = new Map<string, WeightEntry[]>();
   const workoutsByUserId = new Map<string, WorkoutSession[]>();
   const photoMealAnalysesByUserId = new Map<string, PhotoMealAnalysis[]>();
+  const nutritionGoalsByUserId = new Map<string, NutritionGoalVersion[]>();
   let nextMealId = 1;
   let nextWeightId = 1;
   let nextWorkoutId = 1;
@@ -140,6 +145,14 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
     if (existing !== undefined) return existing;
     const created: PhotoMealAnalysis[] = [];
     photoMealAnalysesByUserId.set(userId, created);
+    return created;
+  }
+
+  function userNutritionGoals(userId: string): NutritionGoalVersion[] {
+    const existing = nutritionGoalsByUserId.get(userId);
+    if (existing !== undefined) return existing;
+    const created: NutritionGoalVersion[] = [];
+    nutritionGoalsByUserId.set(userId, created);
     return created;
   }
 
@@ -461,9 +474,47 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
     },
     async save(value) {
       const parsed = profileSettingsSchema.parse({ schemaVersion: 1, ...value });
+      try {
+        const userId = await requireCurrentUserId();
+        const goals = userNutritionGoals(userId);
+        goals.push(nutritionGoalVersionSchema.parse({
+          version: goals.length + 1,
+          effectiveDate: timestamp().slice(0, 10),
+          targets: parsed.targets,
+          createdAt: timestamp(),
+        }));
+      } catch {
+        // Legacy local tests can call save without an authenticated user only to inspect
+        // the outbound payload. In that case no user-owned in-memory history is written.
+      }
       await call(fetcher, 'save-profile', { value: toDraft(parsed) });
     },
   };
 
-  return { auth, profileSettings, meals, weight, workouts, photoMeals };
+  const nutritionGoals: NutritionGoalsRepository = {
+    async listByDateRange(startDate, endDate) {
+      const userId = await requireCurrentUserId();
+      const start = assertDate(startDate);
+      const end = assertDate(endDate);
+      if (start > end) throw new Error('Invalid date range');
+      const goals = userNutritionGoals(userId);
+      const coverage = [...goals]
+        .filter((goal) => goal.effectiveDate <= start)
+        .sort((a, b) => (
+          b.effectiveDate.localeCompare(a.effectiveDate)
+          || b.version - a.version
+          || b.createdAt.localeCompare(a.createdAt)
+        ))[0];
+      const selected = goals
+        .filter((goal) => goal.effectiveDate >= start && goal.effectiveDate <= end);
+      const byVersion = new Map<number, NutritionGoalVersion>();
+      if (coverage !== undefined) byVersion.set(coverage.version, coverage);
+      for (const goal of selected) byVersion.set(goal.version, goal);
+      return [...byVersion.values()]
+        .sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate) || a.version - b.version)
+        .map((goal) => nutritionGoalVersionSchema.parse(goal));
+    },
+  };
+
+  return { auth, profileSettings, meals, weight, workouts, photoMeals, nutritionGoals };
 }

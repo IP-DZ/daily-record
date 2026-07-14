@@ -80,6 +80,7 @@ function createAuthFetcher() {
       return responseOf({});
     }
     if (body.operation === 'load-profile') return responseOf({ value: null });
+    if (body.operation === 'save-profile') return responseOf({});
     return new Response('{}', { status: 400 });
   });
 }
@@ -126,7 +127,7 @@ describe('createTestPlatform', () => {
   });
 
   it('sends profile values without identity metadata', async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response('{}'));
+    const fetcher = createAuthFetcher();
     const platform = createTestPlatform(fetcher);
     const value = {
       inputs: {
@@ -142,10 +143,53 @@ describe('createTestPlatform', () => {
       },
     };
 
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
     await platform.profileSettings.save(value);
 
-    const body = String(fetcher.mock.calls[0]?.[1]?.body);
+    const saveCall = fetcher.mock.calls.find(([, init]) => String(init?.body).includes('"save-profile"'));
+    const body = String(saveCall?.[1]?.body);
     expect(body).not.toMatch(/user_id|savedAt|email/i);
+  });
+
+  it('keeps in-memory nutrition goal history isolated by signed-in user', async () => {
+    const platform = createTestPlatform(createAuthFetcher());
+    const first = {
+      inputs: {
+        age: 30, sex: 'male' as const, heightCm: 175, weightKg: 70,
+        activityLevel: 'moderate' as const, proteinGramsPerKg: 1.8,
+        fatCalorieRatio: 0.25, surplusRatio: 0.1,
+      },
+      trainingDaysPerWeek: 3,
+      trainingExperience: 'intermediate' as const,
+      targets: {
+        restingKcal: 1648.75, maintenanceKcal: 2555.5625, caloriesKcal: 2811.11875,
+        proteinGrams: 126, fatGrams: 78.0866319444, carbsGrams: 401.084765625,
+      },
+    };
+    const second = {
+      ...first,
+      targets: { ...first.targets, caloriesKcal: 2950, proteinGrams: 140 },
+    };
+
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
+    await platform.profileSettings.save(first);
+    await platform.profileSettings.save(second);
+
+    await platform.auth.verifyEmailCode('b@example.test', '246810');
+    await platform.profileSettings.save({
+      ...first,
+      targets: { ...first.targets, caloriesKcal: 1999 },
+    });
+
+    await expect(platform.nutritionGoals.listByDateRange('2026-07-01', '2026-07-31'))
+      .resolves.toMatchObject([{ version: 1, targets: { caloriesKcal: 1999 } }]);
+
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
+    await expect(platform.nutritionGoals.listByDateRange('2026-07-01', '2026-07-31'))
+      .resolves.toMatchObject([
+        { version: 1, targets: first.targets },
+        { version: 2, targets: second.targets },
+      ]);
   });
 
   it('keeps in-memory meals isolated by the signed-in user and recalculates totals', async () => {
