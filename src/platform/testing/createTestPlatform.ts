@@ -1,9 +1,12 @@
 import {
   authUserSchema,
   createMealInputSchema,
+  confirmPhotoMealAnalysisInputSchema,
+  createPhotoMealAnalysisInputSchema,
   createWeightEntryInputSchema,
   createWorkoutInputSchema,
   mealEntrySchema,
+  photoMealAnalysisSchema,
   profileSettingsSchema,
   updateMealInputSchema,
   updateWeightEntryInputSchema,
@@ -12,6 +15,8 @@ import {
   workoutSessionSchema,
   type AuthUser,
   type MealEntry,
+  type PhotoMealAnalysis,
+  type PhotoMealCandidate,
   type ProfileSettingsDraft,
   type ProfileSettingsPayload,
   type WeightEntry,
@@ -19,9 +24,11 @@ import {
 } from '@daily-record/contracts';
 
 import { summarizeMeals } from '../../domain/meals';
+import { candidateToMealInput } from '../../domain/photoMeal';
 import { calculateWorkoutVolume } from '../../domain/workouts';
 import type { AuthPort } from '../auth';
 import type { MealsRepository } from '../meals';
+import type { PhotoMealAnalysisRepository } from '../photoMeal';
 import type { ProfileSettingsRepository } from '../settings/ProfileSettingsRepository';
 import type { WeightRepository } from '../weight';
 import type { WorkoutsRepository } from '../workouts';
@@ -36,6 +43,7 @@ type TestPlatform = {
   meals: MealsRepository;
   weight: WeightRepository;
   workouts: WorkoutsRepository;
+  photoMeals: PhotoMealAnalysisRepository;
 };
 
 function toDraft(value: ProfileSettingsPayload): ProfileSettingsDraft {
@@ -87,11 +95,13 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
   const mealsByUserId = new Map<string, MealEntry[]>();
   const weightByUserId = new Map<string, WeightEntry[]>();
   const workoutsByUserId = new Map<string, WorkoutSession[]>();
+  const photoMealAnalysesByUserId = new Map<string, PhotoMealAnalysis[]>();
   let nextMealId = 1;
   let nextWeightId = 1;
   let nextWorkoutId = 1;
   let nextExerciseId = 1;
   let nextSetId = 1;
+  let nextPhotoMealAnalysisId = 1;
 
   async function requireCurrentUserId(): Promise<string> {
     const response = await call(fetcher, 'current-user') as { user?: unknown };
@@ -125,8 +135,46 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
     return created;
   }
 
+  function userPhotoMealAnalyses(userId: string): PhotoMealAnalysis[] {
+    const existing = photoMealAnalysesByUserId.get(userId);
+    if (existing !== undefined) return existing;
+    const created: PhotoMealAnalysis[] = [];
+    photoMealAnalysesByUserId.set(userId, created);
+    return created;
+  }
+
   function timestamp(): string {
     return new Date().toISOString();
+  }
+
+  function createStoredMealForUser(userId: string, input: unknown): MealEntry {
+    const parsed = createMealInputSchema.parse(input);
+    const now = timestamp();
+    const meal = mealEntrySchema.parse({
+      id: `test-meal-${nextMealId++}`,
+      ...parsed,
+      createdAt: now,
+      updatedAt: now,
+    });
+    userMeals(userId).push(meal);
+    return meal;
+  }
+
+  function defaultPhotoMealCandidates(): PhotoMealCandidate[] {
+    return [{
+      id: 'test-candidate-1',
+      name: '番茄炒蛋盖饭',
+      estimatedGrams: 320,
+      cookingMethod: '炒',
+      nutrition: {
+        caloriesKcal: 520,
+        proteinGrams: 28,
+        fatGrams: 18,
+        carbsGrams: 62,
+      },
+      confidence: 0.82,
+      questions: [],
+    }];
   }
 
   const auth: AuthPort = {
@@ -174,16 +222,7 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
     },
     async create(input) {
       const userId = await requireCurrentUserId();
-      const parsed = createMealInputSchema.parse(input);
-      const now = timestamp();
-      const meal = mealEntrySchema.parse({
-        id: `test-meal-${nextMealId++}`,
-        ...parsed,
-        createdAt: now,
-        updatedAt: now,
-      });
-      userMeals(userId).push(meal);
-      return meal;
+      return createStoredMealForUser(userId, input);
     },
     async update(input) {
       const userId = await requireCurrentUserId();
@@ -352,6 +391,67 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
     },
   };
 
+  const photoMeals: PhotoMealAnalysisRepository = {
+    async create(input) {
+      const userId = await requireCurrentUserId();
+      const parsed = createPhotoMealAnalysisInputSchema.parse(input);
+      const analyses = userPhotoMealAnalyses(userId);
+      const existing = analyses.find((analysis) => analysis.requestId === parsed.requestId);
+      if (existing !== undefined) {
+        return photoMealAnalysisSchema.parse(existing);
+      }
+      const id = `test-photo-meal-analysis-${nextPhotoMealAnalysisId++}`;
+      const now = timestamp();
+      const analysis = photoMealAnalysisSchema.parse({
+        id,
+        mealDate: parsed.mealDate,
+        requestId: parsed.requestId,
+        status: 'needs-confirmation',
+        candidates: defaultPhotoMealCandidates(),
+        overallConfidence: 0.82,
+        questions: [],
+        imageObjectKey: `users/test/${encodeURIComponent(userId)}/photo-meal/${id}/photo.webp`,
+        errorCode: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+      analyses.push(analysis);
+      return analysis;
+    },
+    async get(id) {
+      const userId = await requireCurrentUserId();
+      const analysis = userPhotoMealAnalyses(userId).find((entry) => entry.id === id);
+      if (analysis === undefined) throw new Error('Photo meal analysis not found');
+      return photoMealAnalysisSchema.parse(analysis);
+    },
+    async confirm(input) {
+      const userId = await requireCurrentUserId();
+      const parsed = confirmPhotoMealAnalysisInputSchema.parse(input);
+      const analysis = userPhotoMealAnalyses(userId).find((entry) => entry.id === parsed.analysisId);
+      if (analysis === undefined) throw new Error('Photo meal analysis not found');
+      if (analysis.status !== 'needs-confirmation') {
+        throw new Error('Photo meal analysis cannot be confirmed');
+      }
+      const meals = parsed.items.map((candidate) => (
+        createStoredMealForUser(userId, candidateToMealInput(candidate, parsed.mealDate))
+      ));
+      const now = timestamp();
+      analysis.status = 'confirmed';
+      analysis.updatedAt = now;
+      return meals;
+    },
+    async discard(id) {
+      const userId = await requireCurrentUserId();
+      const analysis = userPhotoMealAnalyses(userId).find((entry) => entry.id === id);
+      if (analysis === undefined) throw new Error('Photo meal analysis not found');
+      if (analysis.status === 'confirmed') {
+        throw new Error('Photo meal analysis cannot be discarded');
+      }
+      analysis.status = 'discarded';
+      analysis.updatedAt = timestamp();
+    },
+  };
+
   const profileSettings: ProfileSettingsRepository = {
     async load(): Promise<ProfileSettingsDraft | null> {
       const response = await call(fetcher, 'load-profile') as { value?: unknown };
@@ -365,5 +465,5 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
     },
   };
 
-  return { auth, profileSettings, meals, weight, workouts };
+  return { auth, profileSettings, meals, weight, workouts, photoMeals };
 }

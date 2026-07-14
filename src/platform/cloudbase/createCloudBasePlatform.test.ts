@@ -7,6 +7,7 @@ const sdk = vi.hoisted(() => ({
     signOut: vi.fn(),
   },
   init: vi.fn(),
+  callFunction: vi.fn(),
   rdbClient: { rpc: vi.fn() },
   rdb: vi.fn(),
 }));
@@ -16,16 +17,18 @@ vi.mock('@cloudbase/js-sdk', () => ({
 }));
 
 import { CloudBaseAuthAdapter } from './CloudBaseAuthAdapter';
+import { CloudBasePhotoMealAnalysisRepository } from './CloudBasePhotoMealAnalysisRepository';
 import { createCloudBasePlatform } from './createCloudBasePlatform';
 
 describe('createCloudBasePlatform', () => {
   beforeEach(() => {
     sdk.init.mockReset();
+    sdk.callFunction.mockReset();
     sdk.rdb.mockReset();
     sdk.rdbClient.rpc.mockReset();
     sdk.rdb.mockReturnValue(sdk.rdbClient);
     sdk.rdbClient.rpc.mockResolvedValue({ data: null, error: null });
-    sdk.init.mockReturnValue({ auth: sdk.auth, rdb: sdk.rdb });
+    sdk.init.mockReturnValue({ auth: sdk.auth, callFunction: sdk.callFunction, rdb: sdk.rdb });
   });
 
   it('用固定超时和公开配置初始化真实 SDK 入口', () => {
@@ -57,6 +60,7 @@ describe('createCloudBasePlatform', () => {
     expect(Object.keys(platform)).toEqual(['auth', 'profileSettings']);
     expect(platform).not.toHaveProperty('sdk');
     expect(platform).not.toHaveProperty('rdb');
+    expect(platform.photoMeals).toBeInstanceOf(CloudBasePhotoMealAnalysisRepository);
     expect(sdk.rdb).toHaveBeenCalledTimes(1);
 
     await expect(platform.profileSettings.load()).resolves.toBeNull();

@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的“图片识别”需求、`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md` 任务 6、用户已批准的方案 A 与大陆网络约束
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：Task 1 已提交推送；Task 2 已完成代码、聚焦验证和 Anvil 审阅，待保护性提交/推送后继续 Task 3：PhotoMeal 平台端口与 CloudBase/test adapters。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化先使用固定夹具和 test platform。
+- **Resume Point**：Task 1、Task 2 已提交推送；Task 3 已完成代码、聚焦验证和 Anvil 审阅，待保护性提交/推送后继续 Task 4：生产迁移、RLS/RPC 与云函数纯处理器。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化先使用固定夹具和 test platform。
 
 ## 模块边界
 
@@ -314,6 +314,29 @@ graph TD
   - Modify `src/platform/cloudbase/index.ts`
   - Modify `src/platform/testing/createTestPlatform.ts`
   - Modify `src/platform/testing/createTestPlatform.test.ts`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `src/platform/photoMeal/PhotoMealAnalysisRepository.ts`
+  - `src/platform/photoMeal/index.ts`
+  - `src/platform/cloudbase/CloudBasePhotoMealAnalysisRepository.test.ts`
+  - `src/platform/cloudbase/CloudBasePhotoMealAnalysisRepository.ts`
+  - `src/platform/cloudbase/createCloudBasePlatform.ts`
+  - `src/platform/cloudbase/createCloudBasePlatform.test.ts`
+  - `src/platform/cloudbase/index.ts`
+  - `src/platform/testing/createTestPlatform.ts`
+  - `src/platform/testing/createTestPlatform.test.ts`
+- **Accepted Change Baseline**：
+  - 新增 `PhotoMealAnalysisRepository` 端口：`create/get/confirm/discard`；确认返回正式 `MealEntry[]`。
+  - 新增 CloudBase adapter，通过 `callFunction({ name: 'mealPhotoAnalysis', data: { action, payload } })` 调用云函数；所有输入/输出走 Task 1 schema；provider 错误统一映射为稳定 `PhotoMealAnalysisRepositoryError`。
+  - `createCloudBasePlatform` 非枚举暴露 `photoMeals`，仍不暴露 raw SDK/RDB。
+  - test platform 新增每用户隔离的图片分析内存仓库；重复 `requestId` 幂等返回既有分析；确认前不写 `meals`，确认后生成正式餐食；丢弃后不能确认。
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/platform/testing/createTestPlatform.test.ts src/platform/cloudbase/CloudBasePhotoMealAnalysisRepository.test.ts` 先因 `../photoMeal` 和 `platform.photoMeals` 不存在失败。
+  - GREEN：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/platform/cloudbase/createCloudBasePlatform.test.ts src/platform/testing/createTestPlatform.test.ts src/platform/cloudbase/CloudBasePhotoMealAnalysisRepository.test.ts` 通过，3 个测试文件、15 条测试通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `git diff --check` 通过。
+- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-14-photo-meal-platform-adapters-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。
 - **执行指令**：
   1. 写失败测试：A/B 用户创建分析互不可见；重复 `requestId` 返回既有分析；confirm 前 `meals.listByDate` totals 不变；confirm 后生成正式餐食；discard 后不能 confirm。
   2. 写 CloudBase adapter 失败测试：断言 callFunction 参数、响应 schema、错误脱敏。

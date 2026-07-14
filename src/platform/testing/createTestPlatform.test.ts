@@ -1,10 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { PreparedMealPhoto } from '@daily-record/contracts';
 import { createTestPlatform } from './createTestPlatform';
 
 const mealDate = '2026-07-14';
 const weightDate = '2026-07-14';
 const workoutDate = '2026-07-14';
+const preparedPhoto: PreparedMealPhoto = {
+  dataUrl: 'data:image/webp;base64,AAAA',
+  mimeType: 'image/webp',
+  sizeBytes: 120_000,
+  width: 1200,
+  height: 900,
+  originalName: 'lunch.webp',
+};
 
 function mealInput(
   name: string,
@@ -295,5 +304,79 @@ describe('createTestPlatform', () => {
     await platform.workouts.delete(aWorkout.id);
     await expect(platform.workouts.listByDateRange('2026-07-01', '2026-07-31'))
       .resolves.toEqual([copied]);
+  });
+
+  it('keeps photo meal analyses isolated, idempotent by request id, and confirms into meals', async () => {
+    const platform = createTestPlatform(createAuthFetcher());
+
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
+    const aAnalysis = await platform.photoMeals.create({
+      mealDate,
+      requestId: 'request-a',
+      photo: preparedPhoto,
+    });
+    const sameAAnalysis = await platform.photoMeals.create({
+      mealDate,
+      requestId: 'request-a',
+      photo: preparedPhoto,
+    });
+    expect(sameAAnalysis.id).toBe(aAnalysis.id);
+    await expect(platform.meals.listByDate(mealDate)).resolves.toMatchObject({
+      meals: [],
+      totals: {
+        caloriesKcal: 0,
+        proteinGrams: 0,
+        fatGrams: 0,
+        carbsGrams: 0,
+      },
+    });
+
+    await platform.auth.verifyEmailCode('b@example.test', '246810');
+    const bAnalysis = await platform.photoMeals.create({
+      mealDate,
+      requestId: 'request-b',
+      photo: preparedPhoto,
+    });
+    await expect(platform.photoMeals.get(aAnalysis.id)).rejects.toThrow('Photo meal analysis not found');
+    expect(bAnalysis.id).not.toBe(aAnalysis.id);
+
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
+    await expect(platform.photoMeals.get(aAnalysis.id)).resolves.toEqual(aAnalysis);
+    const meals = await platform.photoMeals.confirm({
+      analysisId: aAnalysis.id,
+      mealDate,
+      items: aAnalysis.candidates,
+    });
+
+    expect(meals).toHaveLength(1);
+    expect(meals[0]).toMatchObject({
+      mealDate,
+      name: aAnalysis.candidates[0].name,
+      amount: '320克，炒',
+      nutrition: aAnalysis.candidates[0].nutrition,
+    });
+    await expect(platform.meals.listByDate(mealDate)).resolves.toMatchObject({
+      meals,
+      totals: aAnalysis.candidates[0].nutrition,
+    });
+  });
+
+  it('prevents confirming a discarded photo meal analysis', async () => {
+    const platform = createTestPlatform(createAuthFetcher());
+
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
+    const analysis = await platform.photoMeals.create({
+      mealDate,
+      requestId: 'request-discarded',
+      photo: preparedPhoto,
+    });
+
+    await platform.photoMeals.discard(analysis.id);
+
+    await expect(platform.photoMeals.confirm({
+      analysisId: analysis.id,
+      mealDate,
+      items: analysis.candidates,
+    })).rejects.toThrow('Photo meal analysis cannot be confirmed');
   });
 });
