@@ -4,10 +4,10 @@ import { PGlite, type PGliteInterface, type Transaction } from '@electric-sql/pg
 
 export type SqlClient = Pick<Transaction, 'exec' | 'query'>;
 
-const migrationUrl = new URL(
-  '../../cloud/database/migrations/0001_profiles_and_nutrition_goals.sql',
-  import.meta.url,
-);
+const migrationUrls = [
+  new URL('../../cloud/database/migrations/0001_profiles_and_nutrition_goals.sql', import.meta.url),
+  new URL('../../cloud/database/migrations/0002_meals.sql', import.meta.url),
+];
 
 export async function createAuthTestDatabase(): Promise<PGlite> {
   const db = new PGlite();
@@ -31,9 +31,11 @@ export async function createAuthTestDatabase(): Promise<PGlite> {
 }
 
 export async function applyProductionMigration(db: PGliteInterface): Promise<void> {
-  const migration = await readFile(migrationUrl, 'utf8');
+  const migrations = await Promise.all(migrationUrls.map((url) => readFile(url, 'utf8')));
   await db.transaction(async (tx) => {
-    await tx.exec(migration);
+    for (const migration of migrations) {
+      await tx.exec(migration);
+    }
   });
 }
 

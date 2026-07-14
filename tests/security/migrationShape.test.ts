@@ -20,15 +20,16 @@ describe('production migration security shape', () => {
     await db.close();
   });
 
-  it('enables RLS and defines all four own-row policies on both user tables', async () => {
+  it('enables RLS and defines all four own-row policies on all user tables', async () => {
     const tables = await db.query<{ relname: string; relrowsecurity: boolean }>(`
       SELECT relname, relrowsecurity
       FROM pg_class
       WHERE relnamespace = 'public'::regnamespace
-        AND relname IN ('profiles', 'nutrition_goals')
+        AND relname IN ('profiles', 'nutrition_goals', 'meals')
       ORDER BY relname
     `);
     expect(tables.rows).toEqual([
+      { relname: 'meals', relrowsecurity: true },
       { relname: 'nutrition_goals', relrowsecurity: true },
       { relname: 'profiles', relrowsecurity: true },
     ]);
@@ -37,10 +38,10 @@ describe('production migration security shape', () => {
       SELECT tablename, cmd, qual, with_check
       FROM pg_policies
       WHERE schemaname = 'public'
-        AND tablename IN ('profiles', 'nutrition_goals')
+        AND tablename IN ('profiles', 'nutrition_goals', 'meals')
       ORDER BY tablename, cmd
     `);
-    for (const table of ['profiles', 'nutrition_goals']) {
+    for (const table of ['profiles', 'nutrition_goals', 'meals']) {
       const tablePolicies = Object.fromEntries(
         policies.rows
           .filter(({ tablename }) => tablename === table)
@@ -65,7 +66,7 @@ describe('production migration security shape', () => {
       FROM information_schema.role_table_grants
       WHERE grantee IN ('anon', 'authenticated')
         AND table_schema = 'public'
-        AND table_name IN ('profiles', 'nutrition_goals')
+        AND table_name IN ('profiles', 'nutrition_goals', 'meals')
     `);
     expect(tablePrivileges.rows).toEqual([]);
 
@@ -74,7 +75,7 @@ describe('production migration security shape', () => {
       FROM information_schema.column_privileges
       WHERE grantee IN ('anon', 'authenticated')
         AND table_schema = 'public'
-        AND table_name IN ('profiles', 'nutrition_goals')
+        AND table_name IN ('profiles', 'nutrition_goals', 'meals')
     `);
     expect(columnPrivileges.rows).toEqual([]);
   });
@@ -92,10 +93,18 @@ describe('production migration security shape', () => {
              p.proconfig
       FROM pg_proc p
       WHERE p.pronamespace = 'public'::regnamespace
-        AND p.proname IN ('save_my_profile_settings', 'load_my_profile_settings')
+        AND p.proname IN (
+          'save_my_profile_settings',
+          'load_my_profile_settings',
+          'list_my_meals_by_date',
+          'create_my_meal',
+          'update_my_meal',
+          'delete_my_meal',
+          'copy_my_meal'
+        )
       ORDER BY p.proname
     `);
-    expect(functions.rows).toHaveLength(2);
+    expect(functions.rows).toHaveLength(7);
     for (const fn of functions.rows) {
       expect(fn.prosecdef).toBe(true);
       expect(fn.proconfig).toContain('search_path=pg_catalog, public, auth');
@@ -104,18 +113,40 @@ describe('production migration security shape', () => {
     expect(functions.rows.find(({ proname }) => proname === 'save_my_profile_settings')?.arguments).toBe(
       'payload jsonb',
     );
+    expect(functions.rows.find(({ proname }) => proname === 'list_my_meals_by_date')?.arguments).toBe(
+      'meal_date text',
+    );
+    expect(functions.rows.find(({ proname }) => proname === 'create_my_meal')?.arguments).toBe('payload jsonb');
+    expect(functions.rows.find(({ proname }) => proname === 'update_my_meal')?.arguments).toBe('payload jsonb');
+    expect(functions.rows.find(({ proname }) => proname === 'delete_my_meal')?.arguments).toBe('meal_id uuid');
+    expect(functions.rows.find(({ proname }) => proname === 'copy_my_meal')?.arguments).toBe(
+      'meal_id uuid, target_meal_date text',
+    );
 
     const executePrivileges = await db.query<{ grantee: string; routine_name: string }>(`
       SELECT grantee, routine_name
       FROM information_schema.role_routine_grants
       WHERE specific_schema = 'public'
-        AND routine_name IN ('save_my_profile_settings', 'load_my_profile_settings')
+        AND routine_name IN (
+          'save_my_profile_settings',
+          'load_my_profile_settings',
+          'list_my_meals_by_date',
+          'create_my_meal',
+          'update_my_meal',
+          'delete_my_meal',
+          'copy_my_meal'
+        )
         AND grantee IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
       ORDER BY grantee, routine_name
     `);
     expect(executePrivileges.rows).toEqual([
+      { grantee: 'authenticated', routine_name: 'copy_my_meal' },
+      { grantee: 'authenticated', routine_name: 'create_my_meal' },
+      { grantee: 'authenticated', routine_name: 'delete_my_meal' },
+      { grantee: 'authenticated', routine_name: 'list_my_meals_by_date' },
       { grantee: 'authenticated', routine_name: 'load_my_profile_settings' },
       { grantee: 'authenticated', routine_name: 'save_my_profile_settings' },
+      { grantee: 'authenticated', routine_name: 'update_my_meal' },
     ]);
   });
 
@@ -123,9 +154,9 @@ describe('production migration security shape', () => {
     await expect(applyProductionMigration(db)).rejects.toThrow(/already exists/i);
     const shape = await db.query<{ tables: number; policies: number }>(`
       SELECT
-        (SELECT count(*)::int FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relname IN ('profiles', 'nutrition_goals')) AS tables,
-        (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'public' AND tablename IN ('profiles', 'nutrition_goals')) AS policies
+        (SELECT count(*)::int FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relname IN ('profiles', 'nutrition_goals', 'meals')) AS tables,
+        (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'public' AND tablename IN ('profiles', 'nutrition_goals', 'meals')) AS policies
     `);
-    expect(shape.rows[0]).toEqual({ tables: 2, policies: 8 });
+    expect(shape.rows[0]).toEqual({ tables: 3, policies: 12 });
   });
 });
