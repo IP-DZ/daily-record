@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`（用户已于 2026-07-13 确认）
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
-- **Resume Point**：任务 3「今日页与手动饮食闭环」已完成合约、领域汇总、CloudBase/test platform 餐食端口、`meals` 迁移/RLS/RPC、今日页 UI 与移动端 E2E；Task 1–4 已通过独立审阅并提交，Task 5 E2E、状态更新和最终审阅已完成但仍需纳入最终保护性提交。最新证据：ESLint、typecheck、21 files / 273 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 3 passed / 1 real CloudBase manual skipped，新增 manual spec 单独复跑 1 passed。下一步为提交并推送；真实 CloudBase smoke 仍保持环境 blocker。
+- **Resume Point**：任务 4「体重记录与热量反馈」和任务 5「训练记录、复制与容量」已完成合约、领域函数、仓储端口、CloudBase/test platform adapters、`weight/workouts` 迁移/RLS/RPC、体重页、训练页、`/weight` 与 `/workouts` 鉴权路由和移动端 E2E。Task 5 已审阅、提交并推送；Task 6 E2E、状态更新和最终审阅反馈修复已完成。若恢复时这些变更尚未提交，下一步是提交并推送 `tests/e2e/weight-workouts.spec.ts` 与 Anvil 状态文档；若已提交，下一业务切片进入图片分析或趋势前置。最新证据：ESLint、typecheck、29 files / 332 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 4 passed / 1 real CloudBase manual skipped。真实 CloudBase smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境并运行 manual spec。
 
 ## 交付拆分
 
@@ -300,6 +300,10 @@ graph TD
 - **执行指令**：先以失败的汇总/事务测试锁定行为，再实现最小 UI 与后端。
 
 ### 任务 4：体重记录与热量反馈
+- **Code Status**：done（体重/训练细化计划 Task 1–4 已完成共享合约、纯领域反馈、仓储端口、CloudBase adapter、生产迁移/RLS/RPC、体重 UI、`/weight` 鉴权路由和组件测试；真实 CloudBase smoke 仍随任务 2 blocker 保持 blocked）
+- **Actual Write Set**：`packages/contracts/src/weight.ts`、`packages/contracts/src/workouts.ts`、`packages/contracts/src/index.ts`、`src/domain/weight/**`、`src/domain/workouts/**`、`src/platform/weight/**`、`src/platform/workouts/**`、`src/platform/cloudbase/CloudBaseWeightRepository.*`、`src/platform/cloudbase/CloudBaseWorkoutsRepository.*`、`src/platform/cloudbase/createCloudBasePlatform.ts`、`src/platform/cloudbase/index.ts`、`src/platform/testing/createTestPlatform.*`、`cloud/database/migrations/0003_weight_workouts.sql`、`tests/security/weightWorkoutIsolation.test.ts`、`tests/security/migrationShape.test.ts`、`tests/security/pgliteAuthHarness.ts`、`src/features/weight/**`、`src/app/App.tsx`、`src/app/App.test.tsx`、体重/训练细化计划与审阅报告
+- **Verification**：contracts/domain focused tests、repository adapter tests、PGlite isolation tests、Weight/App component tests、`pnpm lint`、`pnpm typecheck`、`git diff --check`
+- **Evidence**：Task 1 contracts/domain：3 files / 27 tests passed，typecheck passed；Task 2 repositories/adapters：3 files / 15 tests passed，typecheck passed；Task 3 migration/isolation：2 files / 19 tests passed，适配器 RPC 参数修复后 lint/typecheck/diff check passed，审阅 PASS；Task 4 Weight UI：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/features/weight/WeightPage.test.tsx src/app/App.test.tsx` 为 2 files / 18 tests passed，`pnpm typecheck`、`pnpm lint`、`git diff --check` 均 passed，审阅见 `.ai/anvil/reviews/2026-07-14-weight-page-review.md`。
 - **Layer**：3
 - **Parallel Group**：G3B
 - **Execution**：parallel
@@ -315,6 +319,10 @@ graph TD
 - **执行指令**：固定日期/时区测试，禁止使用系统隐式当前时间。
 
 ### 任务 5：训练记录、复制与容量
+- **Code Status**：done（体重/训练细化计划 Task 1–3 共享基础已完成；Task 5 已完成训练 UI、`/workouts` 鉴权路由、复制上次训练、completed-set volume 展示和组件/App 测试；Task 6 移动 E2E 已新增并通过；真实 CloudBase smoke 仍随任务 2 blocker 保持 blocked）
+- **Actual Write Set**：`packages/contracts/src/workouts.ts`、`packages/contracts/src/index.ts`、`src/domain/workouts/**`、`src/platform/workouts/**`、`src/platform/cloudbase/CloudBaseWorkoutsRepository.*`、`src/platform/cloudbase/createCloudBasePlatform.ts`、`src/platform/cloudbase/index.ts`、`src/platform/testing/createTestPlatform.*`、`cloud/database/migrations/0003_weight_workouts.sql`、`tests/security/weightWorkoutIsolation.test.ts`、`tests/security/migrationShape.test.ts`、`tests/security/pgliteAuthHarness.ts`、`src/features/workouts/**`、`src/app/App.tsx`、`src/app/App.test.tsx`、`tests/e2e/weight-workouts.spec.ts`、体重/训练细化计划与审阅报告
+- **Verification**：contracts/domain focused tests、repository adapter tests、PGlite isolation tests、Workouts/App component tests、`mobile-chromium` E2E、`pnpm lint`、`pnpm typecheck`、`git diff --check`
+- **Evidence**：Task 1–3 共享合约、仓储和迁移证据同任务 4；Task 5 Workouts UI：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/features/workouts/WorkoutsPage.test.tsx src/app/App.test.tsx` 为 2 files / 19 tests passed，`pnpm typecheck`、`pnpm lint`、`git diff --check` 均 passed，审阅见 `.ai/anvil/reviews/2026-07-14-workouts-page-review.md`；Task 6 mobile E2E：授权重跑 `pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line tests/e2e/weight-workouts.spec.ts` 为 1 passed，覆盖 `/weight?test-platform=1` 登录、保存 70.4 kg 晨重、反馈空数据文案、`/workouts?test-platform=1` 保存卧推 60×8、训练容量 480 kg、复制到 `2026-07-15` 后两条训练。
 - **Layer**：3
 - **Parallel Group**：G3B
 - **Execution**：parallel
@@ -415,11 +423,11 @@ graph TD
 
 | 门禁 | Code Status | 证据 |
 |---|---|---|
-| 自动化测试 | passed | 273 个 Vitest 测试；2026-07-14 最新 `mobile-chromium` 3 passed / 1 个真实环境 manual skipped |
+| 自动化测试 | passed | 332 个 Vitest 测试；2026-07-14 最新 `mobile-chromium` 4 passed / 1 个真实环境 manual skipped |
 | 类型与静态检查 | passed | 全仓 ESLint、`tsc -b`、`git diff --check` 退出码 0 |
 | PWA 构建 | passed | production build 生成 Manifest、Service Worker 与 Workbox；precache 13 entries |
-| 性能预算 | passed | 入口 JavaScript gzip 102.63 kB，低于 250 KB；CloudBase SDK 为独立动态 chunk |
+| 性能预算 | passed | 入口 JavaScript gzip 105.84 kB，低于 250 KB；CloudBase SDK 为独立动态 chunk |
 | 敏感信息与缓存边界 | passed | 生产产物无服务端密钥值、固定测试 OTP/邮箱/端点/test-platform chunk；未新增用户 API runtime caching |
-| 任务级独立审查 | passed | 任务 2 的五个详细子任务与任务 3 的 Task 1–4 最终均无未解决 Critical/Important |
-| 整分支 Anvil 评审 | passed | 任务 2 整分支评审已批准；任务 3 最终审阅 `.ai/anvil/reviews/2026-07-14-manual-meals-final-review.md` 批准，无未解决 Critical/Important |
-| 后续业务任务 | partial | 任务 2 真实 CloudBase smoke blocked；任务 3 已完成本地自动化证据，下一业务切片为体重/训练或图片分析前置 |
+| 任务级独立审查 | passed | 任务 2 的五个详细子任务、任务 3 的 Task 1–4、体重/训练 Task 1–5 最终均无未解决 Critical/Important |
+| 整分支 Anvil 评审 | passed | 任务 2 整分支评审已批准；任务 3 最终审阅 `.ai/anvil/reviews/2026-07-14-manual-meals-final-review.md` 批准；体重页与训练页审阅分别批准，无未解决 Critical/Important |
+| 后续业务任务 | partial | 任务 2 真实 CloudBase smoke blocked；任务 4/5 已完成本地自动化与移动 E2E 证据，下一业务切片为图片分析或趋势前置 |

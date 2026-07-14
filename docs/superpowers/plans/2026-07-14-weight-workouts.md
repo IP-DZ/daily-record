@@ -8,6 +8,9 @@
 
 **Tech Stack:** React 19, TypeScript, Vite, Vitest, Testing Library, Playwright mobile Chromium, Zod contracts, CloudBase PostgreSQL RPC, PGlite security tests.
 
+> 执行状态、验证证据和恢复点以 `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md` 为准；本文件仅保留体重/训练切片的任务分解。
+
+
 ## Global Constraints
 
 - Product language and project documentation default to Chinese.
