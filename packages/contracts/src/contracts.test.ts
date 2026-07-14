@@ -9,21 +9,27 @@ import profileSettingsSource from './profileSettings.ts?raw';
 import {
   authUserSchema,
   createMealInputSchema,
+  createWeightEntryInputSchema,
   emailCodeSchema,
   emailSchema,
   mealEntrySchema,
   mealNutritionTotalsSchema,
   profileSettingsSchema,
   updateMealInputSchema,
+  updateWeightEntryInputSchema,
+  weightEntrySchema,
 } from './index';
 import type {
   CreateMealInput,
+  CreateWeightEntryInput,
   MealEntry,
   MealNutritionTotals,
   NutritionInputs,
   NutritionTargets,
   ProfileSettingsDraft,
   UpdateMealInput,
+  UpdateWeightEntryInput,
+  WeightEntry,
 } from './index';
 
 type IsExact<A, B> =
@@ -41,6 +47,8 @@ const createMealInputKeepsNutritionShape: IsExact<
   MealNutritionTotals
 > = true;
 const updateMealInputKeepsMealId: IsExact<UpdateMealInput['id'], MealEntry['id']> = true;
+const createWeightInputKeepsDate: IsExact<CreateWeightEntryInput['entryDate'], string> = true;
+const updateWeightInputKeepsId: IsExact<UpdateWeightEntryInput['id'], WeightEntry['id']> = true;
 
 const validSettings = {
   schemaVersion: 1,
@@ -241,5 +249,41 @@ describe('meal contracts', () => {
     ['unknown extra keys', { ...validCreateMealInput, note: 'extra' }],
   ])('rejects %s', (_label, value) => {
     expect(() => createMealInputSchema.parse(value)).toThrow();
+  });
+});
+
+describe('weight contracts', () => {
+  const validCreateWeightInput = {
+    entryDate: '2026-07-14',
+    weightKg: 70.4,
+    note: '晨重',
+  } as const;
+
+  it('accepts decimal weight entries and preserves DTO shape', () => {
+    expect(createWeightEntryInputSchema.parse(validCreateWeightInput)).toEqual(validCreateWeightInput);
+    expect(updateWeightEntryInputSchema.parse({ id: 'weight-1', ...validCreateWeightInput })).toEqual({
+      id: 'weight-1',
+      ...validCreateWeightInput,
+    });
+    expect(
+      weightEntrySchema.parse({
+        id: 'weight-1',
+        ...validCreateWeightInput,
+        createdAt: '2026-07-14T12:00:00.000Z',
+        updatedAt: '2026-07-14T12:00:00.000Z',
+      }),
+    ).toBeDefined();
+    expect([createWeightInputKeepsDate, updateWeightInputKeepsId]).toEqual([true, true]);
+  });
+
+  it.each([
+    ['invalid date', { ...validCreateWeightInput, entryDate: '2026-7-14' }],
+    ['weight below minimum', { ...validCreateWeightInput, weightKg: 29.99 }],
+    ['weight above maximum', { ...validCreateWeightInput, weightKg: 350.01 }],
+    ['negative weight', { ...validCreateWeightInput, weightKg: -1 }],
+    ['note too long', { ...validCreateWeightInput, note: 'x'.repeat(501) }],
+    ['unknown extra keys', { ...validCreateWeightInput, source: 'scale' }],
+  ])('rejects %s', (_label, value) => {
+    expect(() => createWeightEntryInputSchema.parse(value)).toThrow();
   });
 });

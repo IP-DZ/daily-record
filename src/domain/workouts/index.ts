@@ -1,0 +1,1 @@
+export { calculateWorkoutVolume } from './workoutVolume';
