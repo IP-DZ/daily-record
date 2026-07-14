@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 import { AuthGate } from '../features/auth';
 import { OnboardingPage } from '../features/onboarding';
+import { TodayPage } from '../features/today';
 import type { AuthPort } from '../platform/auth';
+import type { MealsRepository } from '../platform/meals';
 import type { ProfileSettingsRepository } from '../platform/settings/ProfileSettingsRepository';
 import { readCloudBasePublicConfig } from '../platform/cloudbase/cloudBaseConfig';
 import type { CloudBasePublicConfig } from '../platform/cloudbase/cloudBaseConfig';
@@ -27,14 +29,6 @@ function WelcomePage() {
   );
 }
 
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <main className="page">
-      <h1>{title}</h1>
-    </main>
-  );
-}
-
 const unavailableSettingsRepository: SettingsRepository = {
   async loadDraft() {
     return null;
@@ -48,11 +42,16 @@ const unavailableSettingsRepository: SettingsRepository = {
 interface AppProps {
   auth?: AuthPort;
   profileSettings?: ProfileSettingsRepository;
+  meals?: MealsRepository;
   cloudBaseEnv?: Readonly<Record<string, string | boolean | undefined>>;
   platformLoader?: PlatformLoader;
 }
 
-type Platform = { auth: AuthPort; profileSettings: ProfileSettingsRepository };
+type Platform = {
+  auth: AuthPort;
+  profileSettings: ProfileSettingsRepository;
+  meals: MealsRepository;
+};
 type PlatformLoader = (config: CloudBasePublicConfig) => Promise<Platform>;
 const TEST_PLATFORM_CONFIG: CloudBasePublicConfig = {
   envId: 'test',
@@ -68,6 +67,7 @@ const defaultPlatformLoader: PlatformLoader = async (config) => {
 export function App({
   auth: injectedAuth,
   profileSettings: injectedProfileSettings,
+  meals: injectedMeals,
   cloudBaseEnv = import.meta.env,
   platformLoader = defaultPlatformLoader,
 }: AppProps = {}) {
@@ -124,11 +124,13 @@ export function App({
     status: 'idle' | 'loading' | 'ready' | 'error';
     auth: AuthPort | null;
     profileSettings: ProfileSettingsRepository | null;
+    meals: MealsRepository | null;
   }>(() => ({
     config: publicConfig,
     status: publicConfig === null ? 'idle' : 'loading',
     auth: null,
     profileSettings: null,
+    meals: null,
   }));
   const [loadAttempt, setLoadAttempt] = useState(0);
 
@@ -136,7 +138,13 @@ export function App({
     let active = true;
     if (injectedAuth !== undefined || publicConfig === null) return;
 
-    setPlatformState({ config: publicConfig, status: 'loading', auth: null, profileSettings: null });
+    setPlatformState({
+      config: publicConfig,
+      status: 'loading',
+      auth: null,
+      profileSettings: null,
+      meals: null,
+    });
     void selectedPlatformLoader(publicConfig)
       .then((platform) => {
         if (active) setPlatformState({
@@ -144,10 +152,17 @@ export function App({
           status: 'ready',
           auth: platform.auth,
           profileSettings: platform.profileSettings,
+          meals: platform.meals,
         });
       })
       .catch(() => {
-        if (active) setPlatformState({ config: publicConfig, status: 'error', auth: null, profileSettings: null });
+        if (active) setPlatformState({
+          config: publicConfig,
+          status: 'error',
+          auth: null,
+          profileSettings: null,
+          meals: null,
+        });
       });
     return () => {
       active = false;
@@ -156,9 +171,16 @@ export function App({
 
   const currentPlatformState = platformState.config === publicConfig
     ? platformState
-    : { config: publicConfig, status: 'loading' as const, auth: null, profileSettings: null };
+    : {
+      config: publicConfig,
+      status: 'loading' as const,
+      auth: null,
+      profileSettings: null,
+      meals: null,
+    };
   const auth = injectedAuth ?? currentPlatformState.auth;
   const profileSettings = injectedProfileSettings ?? currentPlatformState.profileSettings;
+  const meals = injectedMeals ?? currentPlatformState.meals;
   const configurationMissing = injectedAuth === undefined
     && !testPlatformRequested
     && publicConfig === null;
@@ -203,6 +225,24 @@ export function App({
   ) : publicConfig !== null ? (
     <main className="auth-loading" role="status">正在连接认证服务…</main>
   ) : offlineOnboardingPage;
+  const todayPage = auth !== null && meals !== null ? (
+    <AuthGate auth={auth}>
+      <TodayPage meals={meals} />
+    </AuthGate>
+  ) : publicConfig !== null && currentPlatformState.status === 'error' ? (
+    <main className="auth-loading">
+      <p role="alert">认证服务加载失败，请稍后重试。</p>
+      <button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>
+        重新连接
+      </button>
+    </main>
+  ) : publicConfig !== null ? (
+    <main className="auth-loading" role="status">正在连接认证服务…</main>
+  ) : (
+    <main className="auth-loading" role="alert">
+      今日记录需要登录后使用；请先配置 CloudBase 或打开测试平台。
+    </main>
+  );
 
   return (
     <>
@@ -214,7 +254,7 @@ export function App({
       <Routes>
         <Route path="/" element={<WelcomePage />} />
         <Route path="/onboarding" element={onboardingPage} />
-        <Route path="/today" element={<PlaceholderPage title="今日记录" />} />
+        <Route path="/today" element={todayPage} />
         <Route path="*" element={<WelcomePage />} />
       </Routes>
       <PwaUpdatePrompt />

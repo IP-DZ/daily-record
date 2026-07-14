@@ -1,8 +1,10 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { MealEntry } from '@daily-record/contracts';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthPort } from '../platform/auth';
+import type { MealsRepository } from '../platform/meals';
 import type { ProfileSettingsRepository } from '../platform/settings/ProfileSettingsRepository';
 import { App } from './App';
 
@@ -30,6 +32,24 @@ function createMemoryStorage(): Storage {
       values.set(key, value);
     },
   };
+}
+
+function createMealsRepository(meals: MealEntry[] = []): MealsRepository {
+  return {
+    listByDate: vi.fn().mockResolvedValue({
+      meals,
+      totals: {
+        caloriesKcal: meals.reduce((sum, meal) => sum + meal.nutrition.caloriesKcal, 0),
+        proteinGrams: meals.reduce((sum, meal) => sum + meal.nutrition.proteinGrams, 0),
+        fatGrams: meals.reduce((sum, meal) => sum + meal.nutrition.fatGrams, 0),
+        carbsGrams: meals.reduce((sum, meal) => sum + meal.nutrition.carbsGrams, 0),
+      },
+    }),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    copy: vi.fn(),
+  } as MealsRepository;
 }
 
 beforeEach(() => {
@@ -65,14 +85,57 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: '计算增肌目标' })).toBeInTheDocument();
   });
 
-  it('keeps the today route available', () => {
+  it('keeps the today route behind the authenticated session', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn().mockResolvedValue(undefined),
+      verifyEmailCode: vi.fn().mockResolvedValue({ userId: 'user-1' }),
+      currentUser: vi.fn().mockResolvedValue(null),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+
     render(
       <MemoryRouter initialEntries={['/today']}>
-        <App />
+        <App auth={auth} meals={createMealsRepository()} />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: '今日记录' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '注册或登录' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '今天吃了什么？' })).not.toBeInTheDocument();
+  });
+
+  it('renders the today tool after auth restores and uses the injected meals repository', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn(),
+      verifyEmailCode: vi.fn(),
+      currentUser: vi.fn().mockResolvedValue({ userId: 'user-today' }),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+    const meals = createMealsRepository([
+      {
+        id: 'meal-route',
+        mealDate: '2026-07-14',
+        name: '路由餐',
+        amount: '1份',
+        nutrition: {
+          caloriesKcal: 500,
+          proteinGrams: 35,
+          fatGrams: 10,
+          carbsGrams: 65,
+        },
+        createdAt: '2026-07-14T00:00:00.000Z',
+        updatedAt: '2026-07-14T00:00:00.000Z',
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={['/today']}>
+        <App auth={auth} meals={meals} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '今天吃了什么？' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '路由餐' })).toBeInTheDocument();
+    expect(meals.listByDate).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
   });
 
   it('shows a recoverable notice when browser storage is unavailable', async () => {
