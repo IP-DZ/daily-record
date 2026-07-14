@@ -47,15 +47,15 @@ describe('CloudBaseMealsRepository', () => {
     await expect(repository.delete(created.id)).resolves.toBeUndefined();
     await expect(repository.copy(created.id, mealDate)).resolves.toEqual(copied);
 
-    expect(rpc).toHaveBeenNthCalledWith(1, 'list_my_meals_by_date', { mealDate });
+    expect(rpc).toHaveBeenNthCalledWith(1, 'list_my_meals_by_date', { meal_date: mealDate });
     expect(rpc).toHaveBeenNthCalledWith(2, 'create_my_meal', { payload: createInput });
     expect(rpc).toHaveBeenNthCalledWith(3, 'update_my_meal', {
       payload: { id: created.id, ...createInput, name: updated.name },
     });
-    expect(rpc).toHaveBeenNthCalledWith(4, 'delete_my_meal', { mealId: created.id });
+    expect(rpc).toHaveBeenNthCalledWith(4, 'delete_my_meal', { meal_id: created.id });
     expect(rpc).toHaveBeenNthCalledWith(5, 'copy_my_meal', {
-      mealId: created.id,
-      mealDate,
+      meal_id: created.id,
+      target_meal_date: mealDate,
     });
     expect(JSON.stringify(rpc.mock.calls)).not.toMatch(/userId|user_id|email/i);
   });

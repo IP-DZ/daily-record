@@ -23,10 +23,10 @@ export interface CloudBaseMealsRdbClient {
   rpc(
     name: MealRpcName,
     parameters?:
-      | { mealDate: string }
+      | { meal_date: string }
       | { payload: CreateMealInput | UpdateMealInput }
-      | { mealId: string }
-      | { mealId: string; mealDate: string },
+      | { meal_id: string }
+      | { meal_id: string; target_meal_date: string },
   ): Promise<{ data: unknown; error?: unknown }>;
 }
 
@@ -74,7 +74,7 @@ export class CloudBaseMealsRepository implements MealsRepository {
   async listByDate(mealDate: string): Promise<MealsByDate> {
     try {
       const response = await this.rdb.rpc('list_my_meals_by_date', {
-        mealDate: requireMealDate(mealDate),
+        meal_date: requireMealDate(mealDate),
       });
       assertNoProviderError(response);
       return parseMealsByDate(response.data);
@@ -108,7 +108,7 @@ export class CloudBaseMealsRepository implements MealsRepository {
   async delete(id: string): Promise<void> {
     try {
       const response = await this.rdb.rpc('delete_my_meal', {
-        mealId: requireMealId(id),
+        meal_id: requireMealId(id),
       });
       assertNoProviderError(response);
     } catch {
@@ -119,8 +119,8 @@ export class CloudBaseMealsRepository implements MealsRepository {
   async copy(id: string, mealDate: string): Promise<MealEntry> {
     try {
       const response = await this.rdb.rpc('copy_my_meal', {
-        mealId: requireMealId(id),
-        mealDate: requireMealDate(mealDate),
+        meal_id: requireMealId(id),
+        target_meal_date: requireMealDate(mealDate),
       });
       assertNoProviderError(response);
       return parseMeal(response.data);
