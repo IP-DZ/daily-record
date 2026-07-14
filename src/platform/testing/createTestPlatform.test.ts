@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestPlatform } from './createTestPlatform';
 
 const mealDate = '2026-07-14';
+const weightDate = '2026-07-14';
+const workoutDate = '2026-07-14';
 
 function mealInput(
   name: string,
@@ -18,6 +20,26 @@ function mealInput(
     name,
     amount: '一份',
     nutrition,
+  };
+}
+
+function workoutInput(name: string, weightKg: number) {
+  return {
+    workoutDate,
+    bodyParts: ['胸'],
+    durationMinutes: 60,
+    note: '',
+    exercises: [
+      {
+        id: `${name}-exercise`,
+        name,
+        order: 1,
+        sets: [
+          { id: `${name}-set-1`, order: 1, weightKg, reps: 8, completed: true },
+          { id: `${name}-set-2`, order: 2, weightKg, reps: 8, completed: false },
+        ],
+      },
+    ],
   };
 }
 
@@ -197,5 +219,81 @@ describe('createTestPlatform', () => {
     await expect(platform.meals.listByDate(mealDate)).rejects.toThrow(
       'Test platform requires an authenticated user',
     );
+  });
+
+  it('keeps in-memory weight entries isolated by the signed-in user', async () => {
+    const platform = createTestPlatform(createAuthFetcher());
+
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
+    const aEntry = await platform.weight.create({
+      entryDate: weightDate,
+      weightKg: 70.4,
+      note: '晨重',
+    });
+
+    await platform.auth.verifyEmailCode('b@example.test', '246810');
+    const bEntry = await platform.weight.create({
+      entryDate: weightDate,
+      weightKg: 80.2,
+      note: '',
+    });
+
+    await expect(platform.weight.listByDateRange('2026-07-01', '2026-07-31'))
+      .resolves.toEqual([bEntry]);
+
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
+    await expect(platform.weight.listByDateRange('2026-07-01', '2026-07-31'))
+      .resolves.toEqual([aEntry]);
+
+    const updated = await platform.weight.update({
+      id: aEntry.id,
+      entryDate: aEntry.entryDate,
+      weightKg: 70.6,
+      note: aEntry.note,
+    });
+    expect(updated).toMatchObject({ id: aEntry.id, weightKg: 70.6 });
+
+    await platform.weight.delete(aEntry.id);
+    await expect(platform.weight.listByDateRange('2026-07-01', '2026-07-31'))
+      .resolves.toEqual([]);
+  });
+
+  it('keeps workouts isolated and copies the latest workout with fresh ids', async () => {
+    const platform = createTestPlatform(createAuthFetcher());
+
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
+    const aWorkout = await platform.workouts.create(workoutInput('卧推', 60));
+
+    await platform.auth.verifyEmailCode('b@example.test', '246810');
+    const bWorkout = await platform.workouts.create(workoutInput('深蹲', 100));
+    await expect(platform.workouts.listByDateRange('2026-07-01', '2026-07-31'))
+      .resolves.toEqual([bWorkout]);
+
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
+    await expect(platform.workouts.listByDateRange('2026-07-01', '2026-07-31'))
+      .resolves.toEqual([aWorkout]);
+
+    const copied = await platform.workouts.copyLatest('2026-07-15');
+    expect(copied).toMatchObject({
+      workoutDate: '2026-07-15',
+      bodyParts: aWorkout.bodyParts,
+      durationMinutes: aWorkout.durationMinutes,
+      exercises: [{
+        name: '卧推',
+        order: 1,
+        sets: [
+          expect.objectContaining({ order: 1, weightKg: 60, reps: 8, completed: true }),
+          expect.objectContaining({ order: 2, weightKg: 60, reps: 8, completed: false }),
+        ],
+      }],
+      volumeKg: 480,
+    });
+    expect(copied.id).not.toBe(aWorkout.id);
+    expect(copied.exercises[0].id).not.toBe(aWorkout.exercises[0].id);
+    expect(copied.exercises[0].sets[0].id).not.toBe(aWorkout.exercises[0].sets[0].id);
+
+    await platform.workouts.delete(aWorkout.id);
+    await expect(platform.workouts.listByDateRange('2026-07-01', '2026-07-31'))
+      .resolves.toEqual([copied]);
   });
 });

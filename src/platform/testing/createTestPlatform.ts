@@ -1,19 +1,30 @@
 import {
   authUserSchema,
   createMealInputSchema,
+  createWeightEntryInputSchema,
+  createWorkoutInputSchema,
   mealEntrySchema,
   profileSettingsSchema,
   updateMealInputSchema,
+  updateWeightEntryInputSchema,
+  updateWorkoutInputSchema,
+  weightEntrySchema,
+  workoutSessionSchema,
   type AuthUser,
   type MealEntry,
   type ProfileSettingsDraft,
   type ProfileSettingsPayload,
+  type WeightEntry,
+  type WorkoutSession,
 } from '@daily-record/contracts';
 
 import { summarizeMeals } from '../../domain/meals';
+import { calculateWorkoutVolume } from '../../domain/workouts';
 import type { AuthPort } from '../auth';
 import type { MealsRepository } from '../meals';
 import type { ProfileSettingsRepository } from '../settings/ProfileSettingsRepository';
+import type { WeightRepository } from '../weight';
+import type { WorkoutsRepository } from '../workouts';
 
 const ENDPOINT = '/__daily-record-test-platform';
 const CLIENT_KEY = 'daily-record:test-platform-client';
@@ -23,6 +34,8 @@ type TestPlatform = {
   auth: AuthPort;
   profileSettings: ProfileSettingsRepository;
   meals: MealsRepository;
+  weight: WeightRepository;
+  workouts: WorkoutsRepository;
 };
 
 function toDraft(value: ProfileSettingsPayload): ProfileSettingsDraft {
@@ -63,9 +76,22 @@ function assertMealDate(mealDate: string): string {
   return mealDate;
 }
 
+function assertDate(date: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error('Invalid date');
+  }
+  return date;
+}
+
 export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
   const mealsByUserId = new Map<string, MealEntry[]>();
+  const weightByUserId = new Map<string, WeightEntry[]>();
+  const workoutsByUserId = new Map<string, WorkoutSession[]>();
   let nextMealId = 1;
+  let nextWeightId = 1;
+  let nextWorkoutId = 1;
+  let nextExerciseId = 1;
+  let nextSetId = 1;
 
   async function requireCurrentUserId(): Promise<string> {
     const response = await call(fetcher, 'current-user') as { user?: unknown };
@@ -80,6 +106,22 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
     if (existing !== undefined) return existing;
     const created: MealEntry[] = [];
     mealsByUserId.set(userId, created);
+    return created;
+  }
+
+  function userWeight(userId: string): WeightEntry[] {
+    const existing = weightByUserId.get(userId);
+    if (existing !== undefined) return existing;
+    const created: WeightEntry[] = [];
+    weightByUserId.set(userId, created);
+    return created;
+  }
+
+  function userWorkouts(userId: string): WorkoutSession[] {
+    const existing = workoutsByUserId.get(userId);
+    if (existing !== undefined) return existing;
+    const created: WorkoutSession[] = [];
+    workoutsByUserId.set(userId, created);
     return created;
   }
 
@@ -184,6 +226,132 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
     },
   };
 
+  const weight: WeightRepository = {
+    async listByDateRange(startDate, endDate) {
+      const userId = await requireCurrentUserId();
+      const start = assertDate(startDate);
+      const end = assertDate(endDate);
+      return userWeight(userId)
+        .filter((entry) => entry.entryDate >= start && entry.entryDate <= end)
+        .sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.id.localeCompare(b.id))
+        .map((entry) => weightEntrySchema.parse(entry));
+    },
+    async create(input) {
+      const userId = await requireCurrentUserId();
+      const parsed = createWeightEntryInputSchema.parse(input);
+      const now = timestamp();
+      const entry = weightEntrySchema.parse({
+        id: `test-weight-${nextWeightId++}`,
+        ...parsed,
+        note: parsed.note ?? '',
+        createdAt: now,
+        updatedAt: now,
+      });
+      userWeight(userId).push(entry);
+      return entry;
+    },
+    async update(input) {
+      const userId = await requireCurrentUserId();
+      const parsed = updateWeightEntryInputSchema.parse(input);
+      const entries = userWeight(userId);
+      const index = entries.findIndex((entry) => entry.id === parsed.id);
+      if (index < 0) throw new Error('Weight entry not found');
+      const updated = weightEntrySchema.parse({
+        ...entries[index],
+        ...parsed,
+        note: parsed.note ?? '',
+        updatedAt: timestamp(),
+      });
+      entries[index] = updated;
+      return updated;
+    },
+    async delete(id) {
+      const userId = await requireCurrentUserId();
+      const entries = userWeight(userId);
+      const index = entries.findIndex((entry) => entry.id === id);
+      if (index < 0) throw new Error('Weight entry not found');
+      entries.splice(index, 1);
+    },
+  };
+
+  function createStoredWorkout(input: unknown, workoutId: string, workoutDateOverride?: string): WorkoutSession {
+    const parsed = createWorkoutInputSchema.parse(input);
+    const now = timestamp();
+    const sessionWithoutVolume = {
+      id: workoutId,
+      ...parsed,
+      workoutDate: workoutDateOverride ?? parsed.workoutDate,
+      note: parsed.note ?? '',
+      exercises: parsed.exercises.map((exercise) => ({
+        ...exercise,
+        id: `test-exercise-${nextExerciseId++}`,
+        sets: exercise.sets.map((set) => ({
+          ...set,
+          id: `test-set-${nextSetId++}`,
+        })),
+      })),
+      createdAt: now,
+      updatedAt: now,
+    };
+    return workoutSessionSchema.parse({
+      ...sessionWithoutVolume,
+      volumeKg: calculateWorkoutVolume(sessionWithoutVolume),
+    });
+  }
+
+  const workouts: WorkoutsRepository = {
+    async listByDateRange(startDate, endDate) {
+      const userId = await requireCurrentUserId();
+      const start = assertDate(startDate);
+      const end = assertDate(endDate);
+      return userWorkouts(userId)
+        .filter((workout) => workout.workoutDate >= start && workout.workoutDate <= end)
+        .sort((a, b) => a.workoutDate.localeCompare(b.workoutDate) || a.id.localeCompare(b.id))
+        .map((workout) => workoutSessionSchema.parse(workout));
+    },
+    async create(input) {
+      const userId = await requireCurrentUserId();
+      const workout = createStoredWorkout(input, `test-workout-${nextWorkoutId++}`);
+      userWorkouts(userId).push(workout);
+      return workout;
+    },
+    async update(input) {
+      const userId = await requireCurrentUserId();
+      const parsed = updateWorkoutInputSchema.parse(input);
+      const sessions = userWorkouts(userId);
+      const index = sessions.findIndex((workout) => workout.id === parsed.id);
+      if (index < 0) throw new Error('Workout not found');
+      const { id, ...rest } = parsed;
+      const updated = createStoredWorkout(rest, id);
+      sessions[index] = updated;
+      return updated;
+    },
+    async delete(id) {
+      const userId = await requireCurrentUserId();
+      const sessions = userWorkouts(userId);
+      const index = sessions.findIndex((workout) => workout.id === id);
+      if (index < 0) throw new Error('Workout not found');
+      sessions.splice(index, 1);
+    },
+    async copyLatest(targetDate) {
+      const userId = await requireCurrentUserId();
+      const date = assertDate(targetDate);
+      const latest = [...userWorkouts(userId)]
+        .filter((workout) => workout.workoutDate <= date)
+        .sort((a, b) => b.workoutDate.localeCompare(a.workoutDate) || b.createdAt.localeCompare(a.createdAt))[0];
+      if (latest === undefined) throw new Error('Workout not found');
+      const copied = createStoredWorkout({
+        workoutDate: date,
+        bodyParts: latest.bodyParts,
+        durationMinutes: latest.durationMinutes,
+        note: latest.note,
+        exercises: latest.exercises,
+      }, `test-workout-${nextWorkoutId++}`, date);
+      userWorkouts(userId).push(copied);
+      return copied;
+    },
+  };
+
   const profileSettings: ProfileSettingsRepository = {
     async load(): Promise<ProfileSettingsDraft | null> {
       const response = await call(fetcher, 'load-profile') as { value?: unknown };
@@ -197,5 +365,5 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
     },
   };
 
-  return { auth, profileSettings, meals };
+  return { auth, profileSettings, meals, weight, workouts };
 }

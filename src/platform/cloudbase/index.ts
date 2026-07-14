@@ -4,7 +4,11 @@ export {
 } from './CloudBaseAuthAdapter';
 export type { CloudBaseAuthClient } from './CloudBaseAuthAdapter';
 export { CloudBaseMealsRepository } from './CloudBaseMealsRepository';
+export { CloudBaseWeightRepository } from './CloudBaseWeightRepository';
+export { CloudBaseWorkoutsRepository } from './CloudBaseWorkoutsRepository';
 export type { CloudBaseMealsRdbClient } from './CloudBaseMealsRepository';
+export type { CloudBaseWeightRdbClient } from './CloudBaseWeightRepository';
+export type { CloudBaseWorkoutsRdbClient } from './CloudBaseWorkoutsRepository';
 export { readCloudBasePublicConfig } from './cloudBaseConfig';
 export type {
   CloudBasePublicConfig,
