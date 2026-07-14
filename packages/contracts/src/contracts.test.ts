@@ -8,14 +8,22 @@ import type { OnboardingDraftInput } from '../../../src/platform/settings/onboar
 import profileSettingsSource from './profileSettings.ts?raw';
 import {
   authUserSchema,
+  createMealInputSchema,
   emailCodeSchema,
   emailSchema,
+  mealEntrySchema,
+  mealNutritionTotalsSchema,
   profileSettingsSchema,
+  updateMealInputSchema,
 } from './index';
 import type {
+  CreateMealInput,
+  MealEntry,
+  MealNutritionTotals,
   NutritionInputs,
   NutritionTargets,
   ProfileSettingsDraft,
+  UpdateMealInput,
 } from './index';
 
 type IsExact<A, B> =
@@ -28,6 +36,11 @@ type IsExact<A, B> =
 const nutritionInputsAreCompatible: IsExact<NutritionInputs, AppNutritionInputs> = true;
 const nutritionTargetsAreCompatible: IsExact<NutritionTargets, AppNutritionTargets> = true;
 const profileDraftIsCompatible: IsExact<ProfileSettingsDraft, OnboardingDraftInput> = true;
+const createMealInputKeepsNutritionShape: IsExact<
+  CreateMealInput['nutrition'],
+  MealNutritionTotals
+> = true;
+const updateMealInputKeepsMealId: IsExact<UpdateMealInput['id'], MealEntry['id']> = true;
 
 const validSettings = {
   schemaVersion: 1,
@@ -183,4 +196,50 @@ describe('profile settings contract', () => {
       ).toBeDefined();
     },
   );
+});
+
+describe('meal contracts', () => {
+  const nutrition = {
+    caloriesKcal: 600.5,
+    proteinGrams: 35.2,
+    fatGrams: 18,
+    carbsGrams: 72.3,
+  } as const;
+
+  const validCreateMealInput = {
+    mealDate: '2026-07-14',
+    name: '鸡胸肉饭',
+    amount: '一份',
+    nutrition,
+  } as const;
+
+  it('accepts decimal nutrition totals and meal payloads', () => {
+    expect(mealNutritionTotalsSchema.parse(nutrition)).toEqual(nutrition);
+    expect(createMealInputSchema.parse(validCreateMealInput)).toEqual(validCreateMealInput);
+    expect(
+      mealEntrySchema.parse({
+        id: 'meal-1',
+        ...validCreateMealInput,
+        createdAt: '2026-07-14T12:00:00.000Z',
+        updatedAt: '2026-07-14T12:00:00.000Z',
+      }),
+    ).toBeDefined();
+    expect(updateMealInputSchema.parse({ id: 'meal-1', ...validCreateMealInput })).toEqual({
+      id: 'meal-1',
+      ...validCreateMealInput,
+    });
+    expect([createMealInputKeepsNutritionShape, updateMealInputKeepsMealId]).toEqual([true, true]);
+  });
+
+  it.each([
+    [
+      'negative nutrition numbers',
+      { ...validCreateMealInput, nutrition: { ...nutrition, caloriesKcal: -1 } },
+    ],
+    ['empty meal name', { ...validCreateMealInput, name: '' }],
+    ['invalid YYYY-MM-DD meal date', { ...validCreateMealInput, mealDate: '2026-7-14' }],
+    ['unknown extra keys', { ...validCreateMealInput, note: 'extra' }],
+  ])('rejects %s', (_label, value) => {
+    expect(() => createMealInputSchema.parse(value)).toThrow();
+  });
 });
