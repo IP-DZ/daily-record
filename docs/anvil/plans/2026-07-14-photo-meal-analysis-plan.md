@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的“图片识别”需求、`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md` 任务 6、用户已批准的方案 A 与大陆网络约束
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：Task 1、Task 2、Task 3 已提交推送；Task 4 已完成代码、聚焦验证和 Anvil 审阅，待保护性提交/推送后继续 Task 5：照片记餐 UI 与 App 路由。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化先使用固定夹具和 test platform。
+- **Resume Point**：Task 1、Task 2、Task 3、Task 4 已提交推送；Task 5 已完成代码、聚焦验证和 Anvil 审阅，待保护性提交/推送后继续 Task 6：移动 E2E、状态更新与最终审阅。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化先使用固定夹具和 test platform。
 
 ## 模块边界
 
@@ -415,6 +415,26 @@ graph TD
   - Create `src/features/photo-meal/index.ts`
   - Modify `src/app/App.tsx`
   - Modify `src/app/App.test.tsx`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `src/features/photo-meal/PhotoMealPage.test.tsx`
+  - `src/features/photo-meal/PhotoMealPage.tsx`
+  - `src/features/photo-meal/photoMeal.css`
+  - `src/features/photo-meal/index.ts`
+  - `src/app/App.tsx`
+  - `src/app/App.test.tsx`
+- **Accepted Change Baseline**：
+  - 新增 `/photo-meal` 鉴权页面，显示第三方视觉模型提示、“可编辑估算，不构成医疗建议”和“确认前不会计入今日汇总”。
+  - 页面支持选择图片、调用可注入 `preparePhoto`、创建 AI 分析、展示低置信度问题、编辑/删除/新增候选项、确认后生成正式餐食数量提示。
+  - 失败状态显示安全可恢复错误和“转手动录入”链接，不暴露 provider detail。
+  - App 平台类型和加载状态新增 `photoMeals`，测试平台/CloudBase loader 返回的额外仓库可被路由消费。
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/features/photo-meal/PhotoMealPage.test.tsx src/app/App.test.tsx` 先因 `PhotoMealPage` 和 `/photo-meal` 路由不存在失败。
+  - GREEN：同命令通过，2 个测试文件、20 条测试通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `git diff --check` 通过。
+- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-14-photo-meal-ui-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。
 - **执行指令**：
   1. 写失败组件测试：分析前 totals 不变、候选项可编辑、确认后调用 `photoMeals.confirm` 并显示生成餐食、低置信度问题可见、失败错误脱敏、`/photo-meal` 受 AuthGate 保护。
   2. 运行 RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/features/photo-meal/PhotoMealPage.test.tsx src/app/App.test.tsx`。

@@ -3,10 +3,12 @@ import { Link, Route, Routes } from 'react-router-dom';
 import { AuthGate } from '../features/auth';
 import { OnboardingPage } from '../features/onboarding';
 import { TodayPage } from '../features/today';
+import { PhotoMealPage } from '../features/photo-meal';
 import { WeightPage } from '../features/weight';
 import { WorkoutsPage } from '../features/workouts';
 import type { AuthPort } from '../platform/auth';
 import type { MealsRepository } from '../platform/meals';
+import type { PhotoMealAnalysisRepository } from '../platform/photoMeal';
 import type { ProfileSettingsRepository } from '../platform/settings/ProfileSettingsRepository';
 import type { WeightRepository } from '../platform/weight';
 import type { WorkoutsRepository } from '../platform/workouts';
@@ -47,6 +49,7 @@ interface AppProps {
   auth?: AuthPort;
   profileSettings?: ProfileSettingsRepository;
   meals?: MealsRepository;
+  photoMeals?: PhotoMealAnalysisRepository;
   weight?: WeightRepository;
   workouts?: WorkoutsRepository;
   cloudBaseEnv?: Readonly<Record<string, string | boolean | undefined>>;
@@ -57,6 +60,7 @@ type Platform = {
   auth: AuthPort;
   profileSettings: ProfileSettingsRepository;
   meals: MealsRepository;
+  photoMeals: PhotoMealAnalysisRepository;
   weight: WeightRepository;
   workouts: WorkoutsRepository;
 };
@@ -76,6 +80,7 @@ export function App({
   auth: injectedAuth,
   profileSettings: injectedProfileSettings,
   meals: injectedMeals,
+  photoMeals: injectedPhotoMeals,
   weight: injectedWeight,
   workouts: injectedWorkouts,
   cloudBaseEnv = import.meta.env,
@@ -135,6 +140,7 @@ export function App({
     auth: AuthPort | null;
     profileSettings: ProfileSettingsRepository | null;
     meals: MealsRepository | null;
+    photoMeals: PhotoMealAnalysisRepository | null;
     weight: WeightRepository | null;
     workouts: WorkoutsRepository | null;
   }>(() => ({
@@ -143,6 +149,7 @@ export function App({
     auth: null,
     profileSettings: null,
     meals: null,
+    photoMeals: null,
     weight: null,
     workouts: null,
   }));
@@ -158,6 +165,7 @@ export function App({
       auth: null,
       profileSettings: null,
       meals: null,
+      photoMeals: null,
       weight: null,
       workouts: null,
     });
@@ -169,6 +177,7 @@ export function App({
           auth: platform.auth,
           profileSettings: platform.profileSettings,
           meals: platform.meals,
+          photoMeals: platform.photoMeals,
           weight: platform.weight,
           workouts: platform.workouts,
         });
@@ -180,6 +189,7 @@ export function App({
           auth: null,
           profileSettings: null,
           meals: null,
+          photoMeals: null,
           weight: null,
           workouts: null,
         });
@@ -197,12 +207,14 @@ export function App({
       auth: null,
       profileSettings: null,
       meals: null,
+      photoMeals: null,
       weight: null,
       workouts: null,
     };
   const auth = injectedAuth ?? currentPlatformState.auth;
   const profileSettings = injectedProfileSettings ?? currentPlatformState.profileSettings;
   const meals = injectedMeals ?? currentPlatformState.meals;
+  const photoMeals = injectedPhotoMeals ?? currentPlatformState.photoMeals;
   const weight = injectedWeight ?? currentPlatformState.weight;
   const workouts = injectedWorkouts ?? currentPlatformState.workouts;
   const configurationMissing = injectedAuth === undefined
@@ -285,6 +297,24 @@ export function App({
       体重记录需要登录后使用；请先配置 CloudBase 或打开测试平台。
     </main>
   );
+  const photoMealPage = auth !== null && photoMeals !== null ? (
+    <AuthGate auth={auth}>
+      <PhotoMealPage photoMeals={photoMeals} />
+    </AuthGate>
+  ) : publicConfig !== null && currentPlatformState.status === 'error' ? (
+    <main className="auth-loading">
+      <p role="alert">认证服务加载失败，请稍后重试。</p>
+      <button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>
+        重新连接
+      </button>
+    </main>
+  ) : publicConfig !== null ? (
+    <main className="auth-loading" role="status">正在连接认证服务…</main>
+  ) : (
+    <main className="auth-loading" role="alert">
+      拍照记餐需要登录后使用；请先配置 CloudBase 或打开测试平台。
+    </main>
+  );
   const workoutsPage = auth !== null && workouts !== null ? (
     <AuthGate auth={auth}>
       <WorkoutsPage workouts={workouts} />
@@ -315,6 +345,7 @@ export function App({
         <Route path="/" element={<WelcomePage />} />
         <Route path="/onboarding" element={onboardingPage} />
         <Route path="/today" element={todayPage} />
+        <Route path="/photo-meal" element={photoMealPage} />
         <Route path="/weight" element={weightPage} />
         <Route path="/workouts" element={workoutsPage} />
         <Route path="*" element={<WelcomePage />} />

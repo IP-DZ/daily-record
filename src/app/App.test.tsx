@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthPort } from '../platform/auth';
 import type { MealsRepository } from '../platform/meals';
+import type { PhotoMealAnalysisRepository } from '../platform/photoMeal';
 import type { ProfileSettingsRepository } from '../platform/settings/ProfileSettingsRepository';
 import type { WeightRepository } from '../platform/weight';
 import type { WorkoutsRepository } from '../platform/workouts';
@@ -71,6 +72,15 @@ function createWorkoutsRepository(sessions: WorkoutSession[] = []): WorkoutsRepo
     delete: vi.fn(),
     copyLatest: vi.fn(),
   } as WorkoutsRepository;
+}
+
+function createPhotoMealRepository(): PhotoMealAnalysisRepository {
+  return {
+    create: vi.fn(),
+    get: vi.fn(),
+    confirm: vi.fn(),
+    discard: vi.fn(),
+  } as PhotoMealAnalysisRepository;
 }
 
 beforeEach(() => {
@@ -271,6 +281,42 @@ describe('App', () => {
       expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
     );
+  });
+
+  it('keeps the photo meal route behind the authenticated session', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn().mockResolvedValue(undefined),
+      verifyEmailCode: vi.fn().mockResolvedValue({ userId: 'user-1' }),
+      currentUser: vi.fn().mockResolvedValue(null),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+
+    render(
+      <MemoryRouter initialEntries={['/photo-meal']}>
+        <App auth={auth} photoMeals={createPhotoMealRepository()} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '注册或登录' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '拍照记录饮食' })).not.toBeInTheDocument();
+  });
+
+  it('renders the photo meal tool after auth restores', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn(),
+      verifyEmailCode: vi.fn(),
+      currentUser: vi.fn().mockResolvedValue({ userId: 'user-photo' }),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+
+    render(
+      <MemoryRouter initialEntries={['/photo-meal']}>
+        <App auth={auth} photoMeals={createPhotoMealRepository()} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '拍照记录饮食' })).toBeInTheDocument();
+    expect(screen.getByText('照片会发送给第三方视觉模型处理')).toBeInTheDocument();
   });
 
   it('shows a recoverable notice when browser storage is unavailable', async () => {
