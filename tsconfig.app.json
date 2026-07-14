@@ -6,6 +6,10 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@daily-record/contracts": ["packages/contracts/src/index.ts"]
+    },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
@@ -18,5 +22,5 @@
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.cache/tsconfig.app.tsbuildinfo"
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "packages/contracts/src", "vite.config.ts"]
 }

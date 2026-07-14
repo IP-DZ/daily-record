@@ -1,9 +1,10 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { NutritionInputs, NutritionTargets } from '../../domain/nutrition';
 import type { OnboardingDraft, SettingsRepository } from '../../platform/settings';
+import type { ProfileSettingsRepository } from '../../platform/settings/ProfileSettingsRepository';
 import { OnboardingPage } from './OnboardingPage';
 
 afterEach(cleanup);
@@ -45,6 +46,95 @@ async function waitForFormReady() {
 }
 
 describe('OnboardingPage', () => {
+  it('keeps the current-user local draft and does not load remote settings', async () => {
+    const local = createMemorySettingsRepository({
+      inputs: {
+        age: 31, sex: 'female', heightCm: 165, weightKg: 60, activityLevel: 'light',
+        proteinGramsPerKg: 1.6, fatCalorieRatio: 0.25, surplusRatio: 0.1,
+      },
+      trainingDaysPerWeek: 2,
+      trainingExperience: 'beginner',
+      targets: {
+        restingKcal: 1320.25, maintenanceKcal: 1815.34375, caloriesKcal: 1996.878125,
+        proteinGrams: 96, fatGrams: 55.4688368056, carbsGrams: 278.415201389,
+      },
+      savedAt: '2026-07-13T00:00:00.000Z',
+    });
+    const remote: ProfileSettingsRepository = {
+      load: vi.fn().mockResolvedValue(null),
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+
+    render(<OnboardingPage repository={local} profileSettings={remote} />);
+
+    expect(await screen.findByDisplayValue('31')).toBeInTheDocument();
+    expect(remote.load).not.toHaveBeenCalled();
+  });
+
+  it('loads remote settings only when the current-user local draft is empty', async () => {
+    const remoteDraft = {
+      inputs: {
+        age: 32, sex: 'male' as const, heightCm: 180, weightKg: 80, activityLevel: 'high' as const,
+        proteinGramsPerKg: 2, fatCalorieRatio: 0.25, surplusRatio: 0.1,
+      },
+      trainingDaysPerWeek: 5,
+      trainingExperience: 'advanced' as const,
+      targets: {
+        restingKcal: 1790, maintenanceKcal: 3087.75, caloriesKcal: 3396.525,
+        proteinGrams: 160, fatGrams: 94.3479166667, carbsGrams: 476.3484375,
+      },
+    };
+    const local = createMemorySettingsRepository();
+    const remote: ProfileSettingsRepository = {
+      load: vi.fn().mockResolvedValue(remoteDraft),
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+
+    render(<OnboardingPage repository={local} profileSettings={remote} />);
+
+    expect(await screen.findByDisplayValue('32')).toBeInTheDocument();
+    expect(screen.getByLabelText('每周训练天数')).toHaveValue(5);
+    expect(remote.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('saves the current-user local draft before starting remote sync', async () => {
+    const order: string[] = [];
+    const local = createMemorySettingsRepository();
+    local.saveDraft = vi.fn(async () => { order.push('local'); });
+    const remote: ProfileSettingsRepository = {
+      load: vi.fn().mockResolvedValue(null),
+      save: vi.fn(async () => { order.push('remote'); }),
+    };
+    render(<OnboardingPage repository={local} profileSettings={remote} />);
+    const user = await fillRequiredInputs();
+
+    await user.click(screen.getByRole('button', { name: '计算增肌目标' }));
+
+    expect(await screen.findByText('已保存到此设备并同步到云端。')).toBeInTheDocument();
+    expect(order).toEqual(['local', 'remote']);
+  });
+
+  it('keeps the form and local draft when remote sync fails and permits retry', async () => {
+    const local = createMemorySettingsRepository();
+    const remote: ProfileSettingsRepository = {
+      load: vi.fn().mockResolvedValue(null),
+      save: vi.fn().mockRejectedValueOnce(new Error('private provider detail')).mockResolvedValueOnce(undefined),
+    };
+    render(<OnboardingPage repository={local} profileSettings={remote} />);
+    const user = await fillRequiredInputs();
+
+    await user.click(screen.getByRole('button', { name: '计算增肌目标' }));
+
+    expect(await screen.findByText('云端同步失败，可重试。')).toBeInTheDocument();
+    expect(screen.getByText('2811 千卡')).toBeInTheDocument();
+    expect((await local.loadDraft())?.inputs.weightKg).toBe(70);
+    expect(document.body.textContent).not.toContain('private provider detail');
+
+    await user.click(screen.getByRole('button', { name: '计算增肌目标' }));
+    expect(await screen.findByText('已保存到此设备并同步到云端。')).toBeInTheDocument();
+    expect(remote.save).toHaveBeenCalledTimes(2);
+  });
+
   it('provides editable safe defaults for training context', async () => {
     render(<OnboardingPage repository={createMemorySettingsRepository()} />);
 

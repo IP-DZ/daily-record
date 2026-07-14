@@ -6,11 +6,13 @@ import {
   type NutritionTargets,
 } from '../../domain/nutrition';
 import type { SettingsRepository, TrainingExperience } from '../../platform/settings';
+import type { ProfileSettingsRepository } from '../../platform/settings/ProfileSettingsRepository';
 import { NutritionTargetPreview } from './NutritionTargetPreview';
 import './onboarding.css';
 
 interface OnboardingPageProps {
   repository: SettingsRepository;
+  profileSettings?: ProfileSettingsRepository;
 }
 
 type FormValues = {
@@ -63,7 +65,7 @@ function isFieldName(value: PropertyKey | undefined): value is FieldName {
   return typeof value === 'string' && value in initialValues;
 }
 
-export function OnboardingPage({ repository }: OnboardingPageProps) {
+export function OnboardingPage({ repository, profileSettings }: OnboardingPageProps) {
   const [values, setValues] = useState(initialValues);
   const [targets, setTargets] = useState<NutritionTargets | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -79,7 +81,18 @@ export function OnboardingPage({ repository }: OnboardingPageProps) {
 
     async function restoreDraft() {
       try {
-        const draft = await repository.loadDraft();
+        let draft = await repository.loadDraft();
+        if (draft === null && profileSettings !== undefined) {
+          const remoteDraft = await profileSettings.load();
+          if (remoteDraft !== null) {
+            draft = { ...remoteDraft, savedAt: new Date(0).toISOString() };
+            try {
+              await repository.saveDraft(remoteDraft);
+            } catch {
+              // A valid remote value may still populate the form when local persistence is unavailable.
+            }
+          }
+        }
         if (!active || draft === null) return;
 
         setValues({
@@ -108,7 +121,7 @@ export function OnboardingPage({ repository }: OnboardingPageProps) {
     return () => {
       active = false;
     };
-  }, [repository]);
+  }, [profileSettings, repository]);
 
   function updateValue(field: FieldName, value: string) {
     formRevision.current += 1;
@@ -177,14 +190,29 @@ export function OnboardingPage({ repository }: OnboardingPageProps) {
     setTargets(nextTargets);
     setIsSaving(true);
     try {
-      await repository.saveDraft({
+      const draft = {
         inputs: result.data,
         trainingDaysPerWeek,
         trainingExperience: values.trainingExperience as TrainingExperience,
         targets: nextTargets,
-      });
+      };
+      await repository.saveDraft(draft);
+      if (profileSettings !== undefined) {
+        try {
+          await profileSettings.save(draft);
+        } catch {
+          if (formRevision.current === calculationRevision) {
+            setDraftMessage('云端同步失败，可重试。');
+          }
+          return;
+        }
+      }
       if (formRevision.current === calculationRevision) {
-        setDraftMessage('草稿已保存在此设备。');
+        setDraftMessage(
+          profileSettings === undefined
+            ? '草稿已保存在此设备。'
+            : '已保存到此设备并同步到云端。',
+        );
       }
     } catch {
       if (formRevision.current === calculationRevision) {

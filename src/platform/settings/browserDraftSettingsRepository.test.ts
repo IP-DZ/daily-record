@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { BrowserDraftSettingsRepository } from './browserDraftSettingsRepository';
 
-const STORAGE_KEY = 'daily-record:onboarding-draft:v1';
+const STORAGE_KEY = 'daily-record:onboarding-draft:v2:guest';
 const NOW = new Date('2026-07-13T02:03:04.000Z');
 
 const draft = {
@@ -63,6 +63,75 @@ describe('BrowserDraftSettingsRepository', () => {
       ...draft,
       savedAt: '2026-07-13T02:03:04.000Z',
     });
+  });
+
+  it('uses only the explicitly selected user namespace without enumeration or fallback', async () => {
+    const otherDraft = { ...draft, inputs: { ...draft.inputs, age: 45 }, savedAt: NOW.toISOString() };
+    storage.setItem('daily-record:onboarding-draft:v1', JSON.stringify(otherDraft));
+    storage.setItem('daily-record:onboarding-draft:v2:guest', JSON.stringify(otherDraft));
+    storage.setItem('daily-record:onboarding-draft:v2:user:user-b', JSON.stringify(otherDraft));
+    const repository = new BrowserDraftSettingsRepository(
+      storage,
+      () => NOW,
+      { kind: 'user', userId: 'user-a' },
+    );
+
+    await expect(repository.loadDraft()).resolves.toBeNull();
+    await repository.saveDraft(draft);
+
+    expect(storage.getItem('daily-record:onboarding-draft:v2:user:user-a')).not.toBeNull();
+    expect(storage.getItem('daily-record:onboarding-draft:v1')).not.toBeNull();
+    expect(storage.getItem('daily-record:onboarding-draft:v2:guest')).not.toBeNull();
+    expect(storage.getItem('daily-record:onboarding-draft:v2:user:user-b')).not.toBeNull();
+  });
+
+  it('clears only the selected user namespace', async () => {
+    storage.setItem('daily-record:onboarding-draft:v2:user:user-b', 'keep');
+    const repository = new BrowserDraftSettingsRepository(
+      storage,
+      () => NOW,
+      { kind: 'user', userId: 'user-a' },
+    );
+    await repository.saveDraft(draft);
+
+    await repository.clearDraft();
+
+    expect(storage.getItem('daily-record:onboarding-draft:v2:user:user-a')).toBeNull();
+    expect(storage.getItem('daily-record:onboarding-draft:v2:user:user-b')).toBe('keep');
+  });
+
+  it('keeps the guest namespace disjoint from a legal user ID equal to guest', async () => {
+    const guest = new BrowserDraftSettingsRepository(storage, () => NOW, { kind: 'guest' });
+    const userNamedGuest = new BrowserDraftSettingsRepository(
+      storage,
+      () => NOW,
+      { kind: 'user', userId: 'guest' },
+    );
+    await guest.saveDraft(draft);
+
+    await expect(userNamedGuest.loadDraft()).resolves.toBeNull();
+    await userNamedGuest.saveDraft({ ...draft, inputs: { ...draft.inputs, age: 40 } });
+    await userNamedGuest.clearDraft();
+
+    await expect(guest.loadDraft()).resolves.toMatchObject({ inputs: { age: 30 } });
+    expect(storage.getItem('daily-record:onboarding-draft:v2:user:guest')).toBeNull();
+  });
+
+  it('encodes user IDs so separators cannot create ambiguous storage keys', async () => {
+    const repository = new BrowserDraftSettingsRepository(
+      storage,
+      () => NOW,
+      { kind: 'user', userId: 'tenant/user:one@example.test' },
+    );
+
+    await repository.saveDraft(draft);
+
+    expect(
+      storage.getItem(
+        `daily-record:onboarding-draft:v2:user:${encodeURIComponent('tenant/user:one@example.test')}`,
+      ),
+    ).not.toBeNull();
+    expect(storage.getItem('daily-record:onboarding-draft:v2:user:tenant/user:one@example.test')).toBeNull();
   });
 
   it('removes malformed JSON and returns null', async () => {

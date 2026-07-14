@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`（用户已于 2026-07-13 确认）
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
-- **Resume Point**：任务 1 已通过整分支 Anvil 终审并纳入首个保护性提交；下一步从任务 2 开始
+- **Resume Point**：任务 2 已通过整分支 Anvil 终审：`authenticated` 无直接表权限，只能调用绑定 `auth.uid()` 的严格 `SECURITY DEFINER` RPC，六项目标均与 JavaScript `finite()` 上限一致；focused PGlite 权限套件 44/44、全仓 237/237 与移动 E2E 2 passed / 1 manual skipped 通过。下一步为创建保护性提交并推送；真实 CloudBase smoke 保持环境 blocker，后续业务开发从任务 3 开始。
 
 ## 交付拆分
 
@@ -261,19 +261,24 @@ graph TD
 - **执行指令**：执行 `docs/superpowers/plans/2026-07-13-foundation-nutrition-onboarding.md`，完成后更新本文任务状态。
 
 ### 任务 2：CloudBase 账号、数据 schema 与隔离
+- **Code Status**：partial（本地合约、认证、RLS、按用户本地草稿、资料同步与移动 E2E 已实现；真实 CloudBase OTP/双会话/跨设备 smoke 因隔离环境缺失而 blocked）
+- **Actual Write Set**：`packages/contracts/**`、`src/platform/auth/**`、`src/platform/cloudbase/**`、`src/platform/settings/**`、`src/platform/testing/**`、`src/features/auth/**`、`src/features/onboarding/**`、`src/app/**`、`cloud/database/**`、`tests/security/**`、`tests/e2e/auth*.spec.ts`、`tests/e2e/cloudbase-auth.manual.spec.ts`、`playwright.config.ts`、`.env.example`、workspace/依赖配置、`docs/operations/cloudbase-test-environment.md`与本状态段
+- **Verification**：`CI=true pnpm lint && CI=true pnpm typecheck && CI=true pnpm test && CI=true pnpm build && CI=true pnpm test:e2e -- --project=mobile-chromium`；生产产物扫描服务端密钥标识、固定测试 OTP、测试邮箱与 token；初始 JS gzip 预算 ≤ 250 KB
+- **Evidence**：终审安全修复后 ESLint、`tsc -b`、17 files / 237 Vitest tests、production PWA build 与 `git diff --check` 通过；focused PGlite 权限套件 44/44 通过；初始 JS gzip 100.87 KB。2026-07-14 最新 `mobile-chromium` 证据为 2 passed / 1 manual skipped，自动覆盖原 onboarding 回归以及内存平台的 OTP、会话恢复、A/B 切换、跨 BrowserContext 目标加载与退出。Task 5 首轮复审发现的 `rdb()` 工厂调用、guest/user key 碰撞、退出清理阻塞/静默失败、manual artifact 与 single-context 缺口均已修复。整分支终审随后发现 `authenticated` 仍有直接表 DML、invoker RPC 校验弱于共享合约及 Playwright 产物未忽略；新增失败测试复现 28 项权限/校验缺口后，迁移改为无直接表权限、仅 auth EXECUTE 的固定路径 definer RPC，显式用 `auth.uid()` 写入/读取，完整严格校验对象键、类型、枚举、整数、范围和非负目标。复审进一步用六个原始 `1e309` JSON 回归复现 PostgreSQL 可保存但 JavaScript 加载为 Infinity 的差异，现六项目标均限制为不超过 `Number.MAX_VALUE`，并验证该精确边界仍被接受。生产产物无服务端密钥标识、固定测试 OTP、测试邮箱、测试端点或 test-platform chunk。真实 manual spec 已显式关闭 trace/screenshot/video 并编排 A/B/A 三个 BrowserContext，但本轮因缺少隔离环境而只验证可发现性、未执行交互登录；blocker owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境并运行 manual spec。
 - **Layer**：2
 - **Parallel Group**：G2
 - **Execution**：serial
 - **Parallel Blocker**：共享认证接口、迁移、RLS、环境配置
-- **Ownership**：`src/platform/**`、`src/features/auth/**`、`packages/contracts/**`、`cloud/database/**`、`cloud/functions/auth/**`、`tests/security/**`
-- **Read Set**：任务 1 公共接口、CloudBase 当前环境配置
+- **Ownership**：`src/platform/**`、`src/features/auth/**`、任务 2 必需的 `src/features/onboarding/**` 与 `src/app/**` 集成点、`packages/contracts/**`、`cloud/database/**`、`cloud/functions/auth/**`、`tests/security/**`、`tests/e2e/auth*.spec.ts`、根 workspace/依赖/测试配置、`.env.example`、`docs/operations/cloudbase-test-environment.md`、任务 2 细化计划与本文状态段
+- **Read Set**：任务 1 公共接口、已确认需求、CloudBase v3 邮箱 OTP / 会话 / PostgreSQL / RLS 官方文档、当前环境配置
 - **Write Set**：同 Ownership
 - **描述**：打通邮箱验证码、会话恢复、资料与目标版本同步，建立全表用户隔离策略。
 - **成功标准**：两个测试账号互不可读写；登录/退出/跨设备目标同步 E2E 通过；浏览器构建扫描不到服务端密钥。
 - **预估 Token**：220k
 - **依赖**：任务 1
-- **涉及文件**：认证 feature、CloudBase 适配器、合约、迁移和权限测试。
-- **执行指令**：先写端口合约测试，再写迁移/RLS，最后接 UI；真实验证码仅在隔离测试环境验证。
+- **涉及文件**：认证 feature、CloudBase 适配器、共享合约、迁移/RLS/RPC、权限测试、App/onboarding 集成、移动 E2E 与隔离环境运维说明。
+- **执行指令**：执行 `docs/superpowers/plans/2026-07-13-cloudbase-auth-isolation.md`；先写失败的端口合约测试，再写迁移/RLS，最后接 UI 与同步；真实验证码仅在隔离测试环境验证。
+- **阶段证据**：合约、CloudBase 适配器、PGlite RLS、认证 UI 与资料同步/E2E 五个详细子任务均通过独立评审；安全修复后整分支为 237 个 Vitest 测试；2026-07-14 最新移动 E2E 为 2 个通过 / 1 个真实环境手工 spec 跳过。真实邮箱 OTP、CloudBase 双连接并发 smoke 因尚未配置隔离环境而未声明通过。
 
 ### 任务 3：今日页与手动饮食闭环
 - **Layer**：3
@@ -406,11 +411,11 @@ graph TD
 
 | 门禁 | Code Status | 证据 |
 |---|---|---|
-| 自动化测试 | passed | 74 个 Vitest 测试与修复后 1 个 `mobile-chromium` E2E 通过 |
-| 类型与静态检查 | passed | `pnpm lint`、`pnpm typecheck`、`git diff --check` 退出码 0 |
-| PWA 构建 | passed | `pnpm build` 生成 Manifest、Service Worker 与 Workbox；precache 12 entries |
-| 性能预算 | passed | 入口 JavaScript gzip 94.28 kB，低于 250 KB |
-| 敏感信息与缓存边界 | passed | 密钥模式扫描无命中；未配置 API/图片 runtime caching |
-| 任务级独立审查 | passed | 五个详细任务均为 Spec PASS / Quality APPROVED |
-| 整分支 Anvil 评审 | passed | `.ai/anvil/reviews/2026-07-13-onboarding-foundation-review.md` 已批准，无未解决发现项 |
-| 后续业务任务 | partial | 任务 2–9 仍待执行，当前恢复点为任务 2 |
+| 自动化测试 | passed | 237 个 Vitest 测试；2026-07-14 最新 `mobile-chromium` 2 passed / 1 个真实环境 manual skipped |
+| 类型与静态检查 | passed | 全仓 ESLint、`tsc -b`、`git diff --check` 退出码 0 |
+| PWA 构建 | passed | production build 生成 Manifest、Service Worker 与 Workbox；precache 13 entries |
+| 性能预算 | passed | 入口 JavaScript gzip 100.87 kB，低于 250 KB；CloudBase SDK 为独立动态 chunk |
+| 敏感信息与缓存边界 | passed | 生产产物无服务端密钥值、固定测试 OTP/邮箱/端点/test-platform chunk；未新增用户 API runtime caching |
+| 任务级独立审查 | passed | 任务 2 的五个详细子任务最终均无 Critical/Important |
+| 整分支 Anvil 评审 | passed | `.ai/anvil/reviews/2026-07-13-cloudbase-auth-isolation-review.md` 批准；无未解决 Critical/Important |
+| 后续业务任务 | partial | 任务 2 真实 CloudBase smoke blocked；下一开发切片为任务 3 |
