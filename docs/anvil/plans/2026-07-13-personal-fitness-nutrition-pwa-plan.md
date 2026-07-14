@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`（用户已于 2026-07-13 确认）
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
-- **Resume Point**：任务 4「体重记录与热量反馈」和任务 5「训练记录、复制与容量」已完成合约、领域函数、仓储端口、CloudBase/test platform adapters、`weight/workouts` 迁移/RLS/RPC、体重页、训练页、`/weight` 与 `/workouts` 鉴权路由和移动端 E2E。Task 5 已审阅、提交并推送；Task 6 E2E、状态更新和最终审阅反馈修复已完成。若恢复时这些变更尚未提交，下一步是提交并推送 `tests/e2e/weight-workouts.spec.ts` 与 Anvil 状态文档；若已提交，下一业务切片进入图片分析或趋势前置。最新证据：ESLint、typecheck、29 files / 332 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 4 passed / 1 real CloudBase manual skipped。真实 CloudBase smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境并运行 manual spec。
+- **Resume Point**：任务 4「体重记录与热量反馈」和任务 5「训练记录、复制与容量」已完成合约、领域函数、仓储端口、CloudBase/test platform adapters、`weight/workouts` 迁移/RLS/RPC、体重页、训练页、`/weight` 与 `/workouts` 鉴权路由和移动端 E2E，并已提交推送。当前下一业务切片为任务 6「图片分析、人工确认与失败恢复」，执行来源为 `docs/anvil/plans/2026-07-14-photo-meal-analysis-plan.md`；下一步执行该计划 Task 1（AI 合约与纯领域函数）。最新已提交证据：ESLint、typecheck、29 files / 332 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 4 passed / 1 real CloudBase manual skipped。真实 CloudBase smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境并运行 manual spec。
 
 ## 交付拆分
 
