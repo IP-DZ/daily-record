@@ -7,6 +7,9 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const distRoot = resolve(repoRoot, 'dist');
+const buildModeMarker = resolve(distRoot, '.build-mode');
+const hasProductionDist = existsSync(buildModeMarker)
+  && readFileSync(buildModeMarker, 'utf8').trim() === 'production';
 
 function readProjectFile(path: string): string {
   return readFileSync(resolve(repoRoot, path), 'utf8');
@@ -58,7 +61,7 @@ describe('deployment and build artifact safety', () => {
     expect(viteConfig).toContain('/^\\/api\\//');
   });
 
-  it.runIf(existsSync(distRoot))('keeps production build artifacts free of test and server-secret markers', () => {
+  it.runIf(hasProductionDist)('keeps production build artifacts free of test and server-secret markers', () => {
     const forbiddenMarkers = [
       /__daily-record-test-platform/,
       /test-platform-client/,

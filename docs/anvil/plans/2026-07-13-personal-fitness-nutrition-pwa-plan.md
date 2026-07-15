@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`（用户已于 2026-07-13 确认）
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
-- **Resume Point**：任务 4「体重记录与热量反馈」、任务 5「训练记录、复制与容量」、任务 6「图片分析、人工确认与失败恢复」、任务 7「营养趋势」和任务 8「综合趋势」均已完成本地自动化、移动端 E2E、Anvil 审阅、状态回写、保护性提交和 GitHub 推送。任务 8 的细化执行来源为 `docs/anvil/plans/2026-07-15-integrated-trends-plan.md`，已交付综合趋势纯领域函数、`/trends` 鉴权 UI、营养/体重/训练三段切换和移动端综合趋势 E2E。最新证据：ESLint、typecheck、43 files / 410 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 7 passed / 1 real CloudBase manual skipped；GitHub 分支 `feature/cloudbase-auth` 已推送到 `64605d6e`，本轮 Task 8.3 证据提交将继续推送。真实 CloudBase smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境、服务端模型变量和测试图片策略后运行 manual spec。当前下一业务切片为任务 9「离线草稿、隐私删除、系统 E2E 与部署」。
+- **Resume Point**：任务 4「体重记录与热量反馈」、任务 5「训练记录、复制与容量」、任务 6「图片分析、人工确认与失败恢复」、任务 7「营养趋势」、任务 8「综合趋势」和任务 9「离线草稿、隐私删除、系统 E2E 与部署」均已完成本地自动化、移动端 E2E、Anvil 审阅、状态回写、保护性提交和 GitHub 推送或进入本次最终提交。任务 9 的细化执行来源为 `docs/anvil/plans/2026-07-15-system-hardening-deployment-plan.md`，已交付离线草稿恢复、隐私设置/清空应用数据、PWA/部署运维加固、生产构建产物安全扫描和完整移动端系统 E2E。最新证据：ESLint、typecheck、48 files / 431 passed / 1 skipped Vitest tests、production build、build artifact safety 4/4、`git diff --check` 全部通过；`mobile-chromium` E2E 8 passed / 1 real CloudBase manual skipped。真实 CloudBase、真实视觉模型和中国大陆网络 smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 和 `docs/operations/deployment.md` 配置隔离环境、服务端模型变量、测试图片策略、测试邮箱和大陆网络设备后运行 manual/smoke 并记录脱敏摘要。
 
 ## 交付拆分
 
@@ -421,6 +421,10 @@ graph TD
 - **依赖**：任务 6、8
 - **涉及文件**：全局 PWA、离线、设置、删除、E2E、部署和文档。
 - **执行指令**：在非生产环境执行删除与真实 AI smoke；保留可复现证据和错误码，不保存敏感输入。
+- **Code Status**：done（细化计划 `2026-07-15-system-hardening-deployment-plan.md` Task 1–4 已完成并通过最终审阅；真实 CloudBase、真实视觉模型和中国大陆网络 smoke 因隔离环境、模型配置和实际网络设备缺失保持 blocked）
+- **Actual Write Set 摘要**：`src/platform/offline/**`、`src/features/{today,weight,workouts}/**` 离线草稿接入、`src/features/settings/**`、`src/platform/account/**`、`cloud/database/migrations/0006_account_deletion.sql`、`tests/security/{accountDeletionIsolation,buildArtifactSafety}.test.ts`、`tests/e2e/system.spec.ts`、`vite.config.ts`、`.env.example`、`docs/operations/**`、本计划和系统加固计划审阅证据。
+- **Verification**：`pnpm_config_verify_deps_before_run=warn pnpm lint` passed；`pnpm_config_verify_deps_before_run=warn pnpm typecheck` passed；`pnpm_config_verify_deps_before_run=warn pnpm test` passed，48 files / 431 passed / 1 skipped；`pnpm_config_verify_deps_before_run=warn pnpm build` passed；`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts` passed，4 tests；`pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line` passed，8 passed / 1 real CloudBase manual skipped；`git diff --check` passed。
+- **Evidence**：系统 E2E 覆盖登录设目标、今日页离线草稿恢复、餐食/体重/训练保存、综合趋势、设置页清空应用数据、清空后餐食/体重/训练不可读；生产 build 通过 `.build-mode` marker 和安全扫描证明正式 `dist` 不含固定测试验证码、测试邮箱、test-platform endpoint/client 或服务端密钥标识；PWA Workbox 无 runtimeCaching，并 denylist `/api/*` 与 `/__*` 导航回退；部署文档明确 CloudBase 静态托管、自托管、大陆网络 smoke、LCP/包体预算与真实 blocker。
 
 ## 会话拆分点
 
@@ -448,11 +452,11 @@ graph TD
 
 | 门禁 | Code Status | 证据 |
 |---|---|---|
-| 自动化测试 | passed | 410 个 Vitest 测试；2026-07-15 最新 `mobile-chromium` 7 passed / 1 个真实环境 manual skipped |
+| 自动化测试 | passed | 48 files / 431 passed / 1 skipped Vitest tests；2026-07-15 最新 `mobile-chromium` 8 passed / 1 个真实环境 manual skipped |
 | 类型与静态检查 | passed | 全仓 ESLint、`tsc -b`、`git diff --check` 退出码 0 |
-| PWA 构建 | passed | production build 生成 Manifest、Service Worker 与 Workbox；Vite 大 chunk 警告为非阻塞，未新增 SW runtime cache |
-| 性能预算 | partial | 本轮 build 通过且未新增首屏必须加载的真实 AI SDK；图片分析与 CloudBase adapter 仍保持动态平台加载。最终大陆网络/LCP 预算归任务 9 统一验收 |
+| PWA 构建 | passed | production build 生成 Manifest、Service Worker 与 Workbox；正式 dist 不含 test-platform chunk；Vite 大 chunk 警告为非阻塞，未新增 SW runtime cache |
+| 性能预算 | partial | 本轮 production build 初始 `index` gzip 112.79 KB，CloudBase 动态 chunk gzip 181.15 KB；真实大陆网络 LCP 仍需设备和网络环境 smoke |
 | 敏感信息与缓存边界 | passed | 生产产物无服务端密钥值、固定测试 OTP/邮箱/端点/test-platform chunk；未新增用户 API runtime caching |
-| 任务级独立审查 | passed | 任务 2 的五个详细子任务、任务 3 的 Task 1–4、体重/训练 Task 1–6、图片分析 Task 1–6、营养趋势 Task 1–4、综合趋势 Task 1–3 最终均无未解决 Critical/Important |
-| 整分支 Anvil 评审 | passed | 任务 2 整分支评审已批准；任务 3 最终审阅 `.ai/anvil/reviews/2026-07-14-manual-meals-final-review.md` 批准；体重页/训练页/图片分析/营养趋势/综合趋势最终审阅均批准，无未解决 Critical/Important |
-| 后续业务任务 | partial | 任务 2 与任务 6/7/8 真实 CloudBase/视觉模型 smoke blocked；任务 4/5/6/7/8 已完成本地自动化与移动 E2E 证据，下一业务切片建议为任务 9 离线草稿、隐私删除、系统 E2E 与部署 |
+| 任务级独立审查 | passed | 任务 2 的五个详细子任务、任务 3 的 Task 1–4、体重/训练 Task 1–6、图片分析 Task 1–6、营养趋势 Task 1–4、综合趋势 Task 1–3、系统加固 Task 1–4 最终均无未解决 Critical/Important |
+| 整分支 Anvil 评审 | passed | 任务 2 整分支评审已批准；任务 3 最终审阅 `.ai/anvil/reviews/2026-07-14-manual-meals-final-review.md` 批准；体重页/训练页/图片分析/营养趋势/综合趋势/系统加固最终审阅均批准，无未解决 Critical/Important |
+| 后续业务任务 | blocked-external | 本地首版实现和自动化验收完成；真实 CloudBase/视觉模型/中国大陆网络 smoke blocked，owner=仓库所有者，next=按运维文档配置真实隔离环境后执行 |

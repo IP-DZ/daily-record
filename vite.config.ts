@@ -1,3 +1,5 @@
+import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import type { PluginOption } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -27,9 +29,19 @@ function resolvePlatformLoader(platformLoader: PlatformLoader): PlatformLoader {
   };
 }
 
+function writeBuildModeMarker(mode: string): PluginOption {
+  return {
+    name: 'write-build-mode-marker',
+    closeBundle() {
+      writeFileSync(resolve('dist/.build-mode'), mode);
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => ({
   plugins: [
     stripTestPlatformFromProduction(mode),
+    writeBuildModeMarker(mode),
     react(),
     VitePWA({
       registerType: 'prompt',

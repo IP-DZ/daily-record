@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的隐私、离线、PWA、部署与验收需求、主计划任务 9、用户已批准的持续开发目标
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：Task 1「离线草稿与恢复确认」、Task 2「隐私设置与清空应用数据」与 Task 3「PWA/部署运维加固」已完成本地实现、RED/GREEN 验证、全量单测、lint、typecheck、production build、构建产物扫描和 diff check。下一步执行 Task 4：系统 E2E、主计划证据回写与最终审阅。真实 CloudBase、真实视觉模型和大陆网络 smoke 仍需要仓库所有者提供隔离环境后执行；本计划会保留 blocker 和可操作 next step，不伪报通过。
+- **Resume Point**：Task 1「离线草稿与恢复确认」、Task 2「隐私设置与清空应用数据」、Task 3「PWA/部署运维加固」和 Task 4「系统 E2E、状态更新与最终审阅」已完成本地实现、RED/GREEN 验证、全量单测、lint、typecheck、production build、构建产物扫描、全量 mobile E2E 和 diff check。真实 CloudBase、真实视觉模型和大陆网络 smoke 仍需要仓库所有者提供隔离环境后执行；本计划保留 blocker 和可操作 next step，不伪报通过。
 
 ## 模块边界
 
@@ -301,6 +301,7 @@ graph TD
   - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
   - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
   - `pnpm_config_verify_deps_before_run=warn pnpm test` 通过，48 files / 432 tests。
+  - FINAL VALIDATION RED：全量 `pnpm_config_verify_deps_before_run=warn pnpm test` 在执行过 `vite build --mode test` 的 E2E 后失败，原因是 `dist` 被 test-mode 构建覆盖，安全扫描误扫到 `createTestPlatform-*.js`。修复为构建时写入 `dist/.build-mode`，只有 marker 为 `production` 才扫描 dist；同一全量测试随后通过，48 files / 431 passed / 1 skipped。
   - `pnpm_config_verify_deps_before_run=warn pnpm build` 通过；生产构建不再生成 `createTestPlatform` chunk，初始 `index` gzip 112.79 KB，CloudBase 动态 chunk gzip 181.15 KB；Vite >500 KB chunk warning 记录为后续优化，不阻断本任务预算。
   - `pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts` 通过，1 file / 4 tests，扫描 `dist/` 未发现服务端密钥标识、固定测试 OTP、test-platform endpoint、test-platform client 或测试邮箱。
   - `git diff --check` 通过。
@@ -330,6 +331,23 @@ graph TD
   3. 补齐实现后运行 focused E2E，再运行全量 readiness path。
   4. 更新主计划 Task 9 `Code Status`、`Verification`、`Evidence` 和 `Resume Point`。
   5. 完成最终 Anvil review；无 Critical/High 后提交并推送。
+- **Code Status**：done
+- **Actual Write Set**：
+  - `tests/e2e/system.spec.ts`
+  - `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`
+  - `docs/anvil/plans/2026-07-15-system-hardening-deployment-plan.md`
+  - `.ai/anvil/reviews/2026-07-15-system-hardening-final-review.md`
+  - Corrective validation fix：`vite.config.ts`、`tests/security/buildArtifactSafety.test.ts`
+- **Verification**：
+  - Focused E2E sandbox RED：`pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line tests/e2e/system.spec.ts` 在沙箱内失败，原因是 preview server 监听 `127.0.0.1:4173` 被 EPERM 拦截。
+  - Focused E2E GREEN：同一命令经批准外部执行通过，1 passed，覆盖登录设目标、今日页草稿恢复、餐食/体重/训练保存、综合趋势、设置页清空、清空后餐食/体重/训练不可读。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm test` 通过，48 files / 431 passed / 1 skipped；skip 为非 production build marker 下的 dist 扫描，发布门禁通过下条 production scan 覆盖。
+  - `pnpm_config_verify_deps_before_run=warn pnpm build` 通过；production build 不含 test-platform chunk，`index` gzip 112.79 KB，CloudBase 动态 chunk gzip 181.15 KB。
+  - `pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts` 通过，1 file / 4 tests。
+  - `pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line` 经批准外部执行通过，8 passed / 1 real CloudBase manual skipped。
+- **Evidence**：新增 `tests/e2e/system.spec.ts` 完整移动端系统流；最终 readiness path 覆盖 lint、typecheck、unit、production build、构建产物安全扫描和全量 mobile E2E。真实 CloudBase OTP/CAPTCHA/双 session、真实视觉模型和中国大陆网络 smoke 仍 blocked，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 与 `docs/operations/deployment.md` 配置隔离环境、模型变量、测试邮箱和大陆网络设备后执行并记录脱敏摘要。
 
 ## 会话拆分点
 
