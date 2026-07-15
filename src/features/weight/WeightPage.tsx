@@ -1,15 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { z } from 'zod';
 
 import type { WeightEntry } from '@daily-record/contracts';
 
 import { calculateWeightFeedback } from '../../domain/weight';
+import type { OfflineDraftRepository } from '../../platform/offline';
 import type { WeightRepository } from '../../platform/weight';
 import './weight.css';
 
 type WeightPageProps = {
   weight: WeightRepository;
   initialDate?: string;
+  draftRepository?: OfflineDraftRepository<WeightDraft>;
 };
+
+export const weightDraftSchema = z.object({
+  selectedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  weightValue: z.string(),
+  note: z.string(),
+}).strict();
+
+export type WeightDraft = z.infer<typeof weightDraftSchema>;
 
 function localDateString(date = new Date()) {
   const year = date.getFullYear();
@@ -40,7 +51,7 @@ function feedbackText(status: ReturnType<typeof calculateWeightFeedback>['status
   return '数据还不够，先继续记录。';
 }
 
-export function WeightPage({ weight, initialDate = localDateString() }: WeightPageProps) {
+export function WeightPage({ weight, initialDate = localDateString(), draftRepository }: WeightPageProps) {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [weightValue, setWeightValue] = useState('');
   const [note, setNote] = useState('');
@@ -48,6 +59,7 @@ export function WeightPage({ weight, initialDate = localDateString() }: WeightPa
   const [entries, setEntries] = useState<WeightEntry[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pendingDraft, setPendingDraft] = useState<WeightDraft | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const loadToken = useRef(0);
@@ -77,6 +89,30 @@ export function WeightPage({ weight, initialDate = localDateString() }: WeightPa
     void loadEntries({ keepOnFailure: entries.length > 0 });
   }, [weight, selectedDate]);
 
+  useEffect(() => {
+    let active = true;
+    if (draftRepository === undefined) return undefined;
+
+    void draftRepository.load()
+      .then((draft) => {
+        if (active) setPendingDraft(draft);
+      })
+      .catch(() => {
+        if (active) setPendingDraft(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [draftRepository]);
+
+  useEffect(() => {
+    if (draftRepository === undefined || editingEntryId !== null) return;
+    if (weightValue.trim() === '' && note.trim() === '') return;
+
+    void draftRepository.save({ selectedDate, weightValue, note }).catch(() => {});
+  }, [draftRepository, editingEntryId, note, selectedDate, weightValue]);
+
   const latestEntries = useMemo(
     () => [...entries].sort((a, b) => b.entryDate.localeCompare(a.entryDate)).slice(0, 7),
     [entries],
@@ -91,6 +127,25 @@ export function WeightPage({ weight, initialDate = localDateString() }: WeightPa
     setEditingEntryId(null);
     setWeightValue('');
     setNote('');
+  }
+
+  function restoreDraft(draft: WeightDraft) {
+    setSelectedDate(draft.selectedDate);
+    setEditingEntryId(null);
+    setWeightValue(draft.weightValue);
+    setNote(draft.note);
+    setPendingDraft(null);
+    setStatusMessage('草稿已恢复，请确认后保存。');
+    setErrorMessage(null);
+  }
+
+  async function discardDraft() {
+    try {
+      await draftRepository?.clear();
+    } catch {
+      // 本地草稿只是便利功能，清除失败不阻断主表单。
+    }
+    setPendingDraft(null);
   }
 
   function startEdit(entry: WeightEntry) {
@@ -131,6 +186,11 @@ export function WeightPage({ weight, initialDate = localDateString() }: WeightPa
         setStatusMessage('修改已保存。');
       }
       resetForm();
+      try {
+        await draftRepository?.clear();
+      } catch {
+        // 保存已成功，本地草稿清理失败不应回滚用户数据。
+      }
       await loadEntries({ keepOnFailure: true });
     } catch {
       setErrorMessage('保存失败，当前列表已保留。');
@@ -178,6 +238,19 @@ export function WeightPage({ weight, initialDate = localDateString() }: WeightPa
       {isLoading && <p role="status" className="weight-message">正在加载体重记录…</p>}
       {statusMessage && <p role="status" className="weight-message">{statusMessage}</p>}
       {errorMessage && <p role="alert" className="weight-error">{errorMessage}</p>}
+      {pendingDraft !== null && (
+        <section className="weight-message" role="status" aria-label="未提交草稿">
+          <p>发现未提交草稿</p>
+          <div className="weight-form-actions">
+            <button type="button" onClick={() => restoreDraft(pendingDraft)}>
+              恢复草稿
+            </button>
+            <button type="button" className="secondary-action" onClick={() => void discardDraft()}>
+              丢弃草稿
+            </button>
+          </div>
+        </section>
+      )}
 
       <form
         className="weight-form"

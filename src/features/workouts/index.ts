@@ -1,1 +1,1 @@
-export { WorkoutsPage } from './WorkoutsPage';
+export { WorkoutsPage, workoutDraftSchema, type WorkoutDraft } from './WorkoutsPage';

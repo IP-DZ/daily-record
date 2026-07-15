@@ -188,6 +188,38 @@ describe('App', () => {
     expect(meals.listByDate).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
   });
 
+  it('connects the today draft repository to the restored user namespace', async () => {
+    window.localStorage.setItem(
+      'daily-record:offline-draft:v1:user:user-today:page:today-meal',
+      JSON.stringify({
+        selectedDate: '2026-07-14',
+        formValues: {
+          name: '路由草稿餐',
+          amount: '1份',
+          caloriesKcal: '500',
+          proteinGrams: '35',
+          fatGrams: '10',
+          carbsGrams: '65',
+        },
+      }),
+    );
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn(),
+      verifyEmailCode: vi.fn(),
+      currentUser: vi.fn().mockResolvedValue({ userId: 'user-today' }),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+
+    render(
+      <MemoryRouter initialEntries={['/today']}>
+        <App auth={auth} meals={createMealsRepository()} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '今天吃了什么？' })).toBeInTheDocument();
+    expect(await screen.findByText('发现未提交草稿')).toBeInTheDocument();
+  });
+
   it('keeps the weight route behind the authenticated session', async () => {
     const auth: AuthPort = {
       requestEmailCode: vi.fn().mockResolvedValue(undefined),

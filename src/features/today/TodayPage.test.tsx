@@ -1,5 +1,5 @@
 import type { CreateMealInput, MealEntry, UpdateMealInput } from '@daily-record/contracts';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -60,6 +60,19 @@ function createMemoryMealsRepository(initialMeals: MealEntry[] = []): MealsRepos
       meals.push(copied);
       return copied;
     },
+  };
+}
+
+function createMemoryDraftRepository<TDraft>(initialDraft: TDraft | null) {
+  let draft = initialDraft;
+  return {
+    save: vi.fn(async (nextDraft: TDraft) => {
+      draft = nextDraft;
+    }),
+    load: vi.fn(async () => draft),
+    clear: vi.fn(async () => {
+      draft = null;
+    }),
   };
 }
 
@@ -241,5 +254,42 @@ describe('TodayPage', () => {
     expect(await screen.findByRole('button', { name: '保存餐食' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '保存修改' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('餐食名称')).toHaveValue('');
+  });
+
+  it('lets the user restore an unsubmitted meal draft and clears it after saving', async () => {
+    const user = userEvent.setup();
+    const draftRepository = createMemoryDraftRepository({
+      selectedDate: today,
+      formValues: {
+        name: '草稿鸡胸饭',
+        amount: '1份',
+        caloriesKcal: '620',
+        proteinGrams: '42',
+        fatGrams: '16',
+        carbsGrams: '78',
+      },
+    });
+
+    render(
+      <TodayPage
+        meals={createMemoryMealsRepository()}
+        initialDate={today}
+        {...({ draftRepository } as unknown as Record<string, unknown>)}
+      />,
+    );
+
+    expect(await screen.findByText('发现未提交草稿')).toBeInTheDocument();
+    expect(screen.getByLabelText('餐食名称')).toHaveValue('');
+
+    await user.click(screen.getByRole('button', { name: '恢复草稿' }));
+    expect(screen.getByLabelText('餐食名称')).toHaveValue('草稿鸡胸饭');
+    expect(screen.getByLabelText('份量')).toHaveValue('1份');
+    expect(screen.getByLabelText('热量')).toHaveValue(620);
+
+    await user.click(screen.getByRole('button', { name: '保存餐食' }));
+
+    expect(await screen.findByRole('heading', { name: '草稿鸡胸饭' })).toBeInTheDocument();
+    await waitFor(() => expect(draftRepository.clear).toHaveBeenCalledTimes(1));
+    await expect(draftRepository.load()).resolves.toBeNull();
   });
 });

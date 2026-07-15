@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
+import type { z } from 'zod';
 import { AuthGate } from '../features/auth';
 import { OnboardingPage } from '../features/onboarding';
-import { TodayPage } from '../features/today';
+import { TodayPage, todayMealDraftSchema } from '../features/today';
 import { PhotoMealPage } from '../features/photo-meal';
 import { NutritionTrendsPage } from '../features/nutrition-trends';
 import { TrendsPage } from '../features/trends';
-import { WeightPage } from '../features/weight';
-import { WorkoutsPage } from '../features/workouts';
+import { WeightPage, weightDraftSchema } from '../features/weight';
+import { WorkoutsPage, workoutDraftSchema } from '../features/workouts';
 import type { AuthPort } from '../platform/auth';
 import type { MealsRepository } from '../platform/meals';
 import type { NutritionGoalsRepository } from '../platform/nutritionGoals';
@@ -21,6 +22,7 @@ import {
   BrowserDraftSettingsRepository,
   type SettingsRepository,
 } from '../platform/settings';
+import { BrowserOfflineDraftRepository } from '../platform/offline';
 import { safeLocalStorage } from '../platform/storage/safeLocalStorage';
 import { PwaUpdatePrompt } from './PwaUpdatePrompt';
 import './styles.css';
@@ -125,6 +127,19 @@ export function App({
     );
     userRepositories.set(userId, repository);
     return repository;
+  };
+  const offlineDraftRepositoryForUser = <TDraft,>(
+    userId: string,
+    pageKey: string,
+    schema: z.ZodType<TDraft>,
+  ) => {
+    if (settings.storage === null) return undefined;
+    return new BrowserOfflineDraftRepository<TDraft>(settings.storage, {
+      identity: { kind: 'user', userId },
+      pageKey,
+      schemaVersion: 1,
+      schema,
+    });
   };
 
   const publicConfig = useMemo<CloudBasePublicConfig | null>(() => {
@@ -276,7 +291,12 @@ export function App({
   ) : offlineOnboardingPage;
   const todayPage = auth !== null && meals !== null ? (
     <AuthGate auth={auth}>
-      <TodayPage meals={meals} />
+      {(user) => (
+        <TodayPage
+          meals={meals}
+          draftRepository={offlineDraftRepositoryForUser(user.userId, 'today-meal', todayMealDraftSchema)}
+        />
+      )}
     </AuthGate>
   ) : publicConfig !== null && currentPlatformState.status === 'error' ? (
     <main className="auth-loading">
@@ -294,7 +314,12 @@ export function App({
   );
   const weightPage = auth !== null && weight !== null ? (
     <AuthGate auth={auth}>
-      <WeightPage weight={weight} />
+      {(user) => (
+        <WeightPage
+          weight={weight}
+          draftRepository={offlineDraftRepositoryForUser(user.userId, 'weight', weightDraftSchema)}
+        />
+      )}
     </AuthGate>
   ) : publicConfig !== null && currentPlatformState.status === 'error' ? (
     <main className="auth-loading">
@@ -330,7 +355,12 @@ export function App({
   );
   const workoutsPage = auth !== null && workouts !== null ? (
     <AuthGate auth={auth}>
-      <WorkoutsPage workouts={workouts} />
+      {(user) => (
+        <WorkoutsPage
+          workouts={workouts}
+          draftRepository={offlineDraftRepositoryForUser(user.userId, 'workouts', workoutDraftSchema)}
+        />
+      )}
     </AuthGate>
   ) : publicConfig !== null && currentPlatformState.status === 'error' ? (
     <main className="auth-loading">

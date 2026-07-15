@@ -1,15 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
+import { z } from 'zod';
 
 import type { WorkoutSession } from '@daily-record/contracts';
 
 import { calculateWorkoutVolume } from '../../domain/workouts';
+import type { OfflineDraftRepository } from '../../platform/offline';
 import type { WorkoutsRepository } from '../../platform/workouts';
 import './workouts.css';
 
 type WorkoutsPageProps = {
   workouts: WorkoutsRepository;
   initialDate?: string;
+  draftRepository?: OfflineDraftRepository<WorkoutDraft>;
 };
+
+export const workoutDraftSchema = z.object({
+  selectedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  bodyParts: z.string(),
+  durationMinutes: z.string(),
+  exerciseName: z.string(),
+  weightKg: z.string(),
+  reps: z.string(),
+  completed: z.boolean(),
+}).strict();
+
+export type WorkoutDraft = z.infer<typeof workoutDraftSchema>;
 
 function localDateString(date = new Date()) {
   const year = date.getFullYear();
@@ -41,7 +56,7 @@ function titleForWorkout(workout: WorkoutSession): string {
   return `${parts} · ${duration}`;
 }
 
-export function WorkoutsPage({ workouts, initialDate = localDateString() }: WorkoutsPageProps) {
+export function WorkoutsPage({ workouts, initialDate = localDateString(), draftRepository }: WorkoutsPageProps) {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [bodyParts, setBodyParts] = useState('');
   const [durationMinutes, setDurationMinutes] = useState('');
@@ -52,6 +67,7 @@ export function WorkoutsPage({ workouts, initialDate = localDateString() }: Work
   const [workoutList, setWorkoutList] = useState<WorkoutSession[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pendingDraft, setPendingDraft] = useState<WorkoutDraft | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const loadToken = useRef(0);
@@ -81,6 +97,41 @@ export function WorkoutsPage({ workouts, initialDate = localDateString() }: Work
     void loadWorkouts({ keepOnFailure: workoutList.length > 0 });
   }, [workouts, selectedDate]);
 
+  useEffect(() => {
+    let active = true;
+    if (draftRepository === undefined) return undefined;
+
+    void draftRepository.load()
+      .then((draft) => {
+        if (active) setPendingDraft(draft);
+      })
+      .catch(() => {
+        if (active) setPendingDraft(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [draftRepository]);
+
+  useEffect(() => {
+    if (draftRepository === undefined) return;
+    const hasDraftContent = [bodyParts, durationMinutes, exerciseName, weightKg, reps]
+      .some((value) => value.trim() !== '')
+      || !completed;
+    if (!hasDraftContent) return;
+
+    void draftRepository.save({
+      selectedDate,
+      bodyParts,
+      durationMinutes,
+      exerciseName,
+      weightKg,
+      reps,
+      completed,
+    }).catch(() => {});
+  }, [bodyParts, completed, draftRepository, durationMinutes, exerciseName, reps, selectedDate, weightKg]);
+
   function resetForm() {
     setBodyParts('');
     setDurationMinutes('');
@@ -88,6 +139,28 @@ export function WorkoutsPage({ workouts, initialDate = localDateString() }: Work
     setWeightKg('');
     setReps('');
     setCompleted(true);
+  }
+
+  function restoreDraft(draft: WorkoutDraft) {
+    setSelectedDate(draft.selectedDate);
+    setBodyParts(draft.bodyParts);
+    setDurationMinutes(draft.durationMinutes);
+    setExerciseName(draft.exerciseName);
+    setWeightKg(draft.weightKg);
+    setReps(draft.reps);
+    setCompleted(draft.completed);
+    setPendingDraft(null);
+    setStatusMessage('草稿已恢复，请确认后保存。');
+    setErrorMessage(null);
+  }
+
+  async function discardDraft() {
+    try {
+      await draftRepository?.clear();
+    } catch {
+      // 本地草稿只是便利功能，清除失败不阻断主表单。
+    }
+    setPendingDraft(null);
   }
 
   async function saveWorkout() {
@@ -132,6 +205,11 @@ export function WorkoutsPage({ workouts, initialDate = localDateString() }: Work
         }],
       });
       resetForm();
+      try {
+        await draftRepository?.clear();
+      } catch {
+        // 保存已成功，本地草稿清理失败不应回滚用户数据。
+      }
       setStatusMessage('训练已保存。');
       await loadWorkouts({ keepOnFailure: true });
     } catch {
@@ -176,6 +254,19 @@ export function WorkoutsPage({ workouts, initialDate = localDateString() }: Work
       {isLoading && <p role="status" className="workouts-message">正在加载训练记录…</p>}
       {statusMessage && <p role="status" className="workouts-message">{statusMessage}</p>}
       {errorMessage && <p role="alert" className="workouts-error">{errorMessage}</p>}
+      {pendingDraft !== null && (
+        <section className="workouts-message" role="status" aria-label="未提交草稿">
+          <p>发现未提交草稿</p>
+          <div className="workouts-form-actions">
+            <button type="button" onClick={() => restoreDraft(pendingDraft)}>
+              恢复草稿
+            </button>
+            <button type="button" className="secondary-action" onClick={() => void discardDraft()}>
+              丢弃草稿
+            </button>
+          </div>
+        </section>
+      )}
 
       <form
         className="workouts-form"

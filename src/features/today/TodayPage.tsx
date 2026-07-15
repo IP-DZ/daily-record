@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { z } from 'zod';
 
 import type { MealEntry, MealNutritionTotals } from '@daily-record/contracts';
 
 import type { MealsRepository } from '../../platform/meals';
+import type { OfflineDraftRepository } from '../../platform/offline';
 import './today.css';
 
 type TodayPageProps = {
   meals: MealsRepository;
   initialDate?: string;
+  draftRepository?: OfflineDraftRepository<TodayMealDraft>;
 };
 
 type MealFormValues = {
@@ -18,6 +21,22 @@ type MealFormValues = {
   fatGrams: string;
   carbsGrams: string;
 };
+
+const mealFormValuesSchema = z.object({
+  name: z.string(),
+  amount: z.string(),
+  caloriesKcal: z.string(),
+  proteinGrams: z.string(),
+  fatGrams: z.string(),
+  carbsGrams: z.string(),
+}).strict();
+
+export const todayMealDraftSchema = z.object({
+  selectedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  formValues: mealFormValuesSchema,
+}).strict();
+
+export type TodayMealDraft = z.infer<typeof todayMealDraftSchema>;
 
 const emptyTotals: MealNutritionTotals = {
   caloriesKcal: 0,
@@ -74,7 +93,7 @@ function isValidNutrition(totals: MealNutritionTotals) {
   return Object.values(totals).every((value) => Number.isFinite(value) && value >= 0);
 }
 
-export function TodayPage({ meals, initialDate = localDateString() }: TodayPageProps) {
+export function TodayPage({ meals, initialDate = localDateString(), draftRepository }: TodayPageProps) {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [mealList, setMealList] = useState<MealEntry[]>([]);
   const [totals, setTotals] = useState<MealNutritionTotals>(emptyTotals);
@@ -82,6 +101,7 @@ export function TodayPage({ meals, initialDate = localDateString() }: TodayPageP
   const [editingMealId, setEditingMealId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pendingDraft, setPendingDraft] = useState<TodayMealDraft | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const loadToken = useRef(0);
@@ -115,6 +135,31 @@ export function TodayPage({ meals, initialDate = localDateString() }: TodayPageP
     void loadDate(selectedDate, { keepOnFailure: mealList.length > 0 });
   }, [meals, selectedDate]);
 
+  useEffect(() => {
+    let active = true;
+    if (draftRepository === undefined) return undefined;
+
+    void draftRepository.load()
+      .then((draft) => {
+        if (active) setPendingDraft(draft);
+      })
+      .catch(() => {
+        if (active) setPendingDraft(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [draftRepository]);
+
+  useEffect(() => {
+    if (draftRepository === undefined || editingMealId !== null) return;
+    const hasDraftContent = Object.values(formValues).some((value) => value.trim() !== '');
+    if (!hasDraftContent) return;
+
+    void draftRepository.save({ selectedDate, formValues }).catch(() => {});
+  }, [draftRepository, editingMealId, formValues, selectedDate]);
+
   const editingMeal = useMemo(
     () => mealList.find((meal) => meal.id === editingMealId) ?? null,
     [editingMealId, mealList],
@@ -136,6 +181,24 @@ export function TodayPage({ meals, initialDate = localDateString() }: TodayPageP
   function resetForm() {
     setEditingMealId(null);
     setFormValues(emptyForm);
+  }
+
+  function restoreDraft(draft: TodayMealDraft) {
+    setSelectedDate(draft.selectedDate);
+    setEditingMealId(null);
+    setFormValues(draft.formValues);
+    setPendingDraft(null);
+    setStatusMessage('草稿已恢复，请确认后保存。');
+    setErrorMessage(null);
+  }
+
+  async function discardDraft() {
+    try {
+      await draftRepository?.clear();
+    } catch {
+      // 本地草稿只是便利功能，清除失败不阻断主表单。
+    }
+    setPendingDraft(null);
   }
 
   async function saveMeal() {
@@ -170,6 +233,11 @@ export function TodayPage({ meals, initialDate = localDateString() }: TodayPageP
         setStatusMessage('修改已保存。');
       }
       resetForm();
+      try {
+        await draftRepository?.clear();
+      } catch {
+        // 保存已成功，本地草稿清理失败不应回滚用户数据。
+      }
       await loadDate(selectedDate, { keepOnFailure: true });
     } catch {
       setErrorMessage('保存失败，当前列表已保留。');
@@ -236,6 +304,19 @@ export function TodayPage({ meals, initialDate = localDateString() }: TodayPageP
       {isLoading && <p role="status" className="today-message">正在加载餐食…</p>}
       {statusMessage && <p role="status" className="today-message">{statusMessage}</p>}
       {errorMessage && <p role="alert" className="today-error">{errorMessage}</p>}
+      {pendingDraft !== null && (
+        <section className="today-message" role="status" aria-label="未提交草稿">
+          <p>发现未提交草稿</p>
+          <div className="today-form-actions">
+            <button type="button" onClick={() => restoreDraft(pendingDraft)}>
+              恢复草稿
+            </button>
+            <button type="button" className="secondary-action" onClick={() => void discardDraft()}>
+              丢弃草稿
+            </button>
+          </div>
+        </section>
+      )}
 
       <form
         className="today-form"

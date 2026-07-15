@@ -2,7 +2,7 @@
 
 ## 执行元数据
 
-- **Status**：confirmed
+- **Status**：active
 - **Workflow Stage**：plan
 - **Created**：2026-07-15
 - **Updated**：2026-07-15
@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的隐私、离线、PWA、部署与验收需求、主计划任务 9、用户已批准的持续开发目标
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：本计划补齐主计划任务 9 的可执行 DAG。下一步执行 Task 1：离线草稿与恢复确认。真实 CloudBase、真实视觉模型和大陆网络 smoke 仍需要仓库所有者提供隔离环境后执行；本计划会保留 blocker 和可操作 next step，不伪报通过。
+- **Resume Point**：Task 1「离线草稿与恢复确认」已完成本地实现、RED/GREEN 验证、全量单测、lint、typecheck 和 diff check，下一步执行 Task 2：隐私设置与清空应用数据。真实 CloudBase、真实视觉模型和大陆网络 smoke 仍需要仓库所有者提供隔离环境后执行；本计划会保留 blocker 和可操作 next step，不伪报通过。
 
 ## 模块边界
 
@@ -137,9 +137,9 @@ graph TD
 - **Parallel Group**：G1
 - **Execution**：serial
 - **Parallel Blocker**：共享本地草稿端口和多个页面表单
-- **Ownership**：`src/platform/offline/**`、`src/features/today/**`、`src/features/weight/**`、`src/features/workouts/**`
+- **Ownership**：`src/platform/offline/**`、`src/features/today/**`、`src/features/weight/**`、`src/features/workouts/**`、`src/app/App.tsx`、`src/app/App.test.tsx`
 - **Read Set**：`src/platform/storage/safeLocalStorage.ts`、既有 Today/Weight/Workouts 页面和测试
-- **Write Set**：同 Ownership
+- **Write Set**：同 Ownership；实际执行中包含 `src/features/today/index.ts`、`src/features/weight/index.ts`、`src/features/workouts/index.ts` 用于向 App 暴露草稿 schema。
 - **描述**：实现用户隔离的本地草稿端口，并接入餐食、体重和训练表单的恢复确认。
 - **成功标准**：同一用户返回页面可看到“发现未提交草稿”，可恢复或丢弃；成功提交后草稿清除；另一个用户不会读到该草稿；localStorage 不保存照片、验证码、token、session 或签名 URL。
 - **预估 Token**：90k
@@ -154,11 +154,41 @@ graph TD
   - Modify `src/features/weight/WeightPage.test.tsx`
   - Modify `src/features/workouts/WorkoutsPage.tsx`
   - Modify `src/features/workouts/WorkoutsPage.test.tsx`
+  - Modify `src/app/App.tsx`
+  - Modify `src/app/App.test.tsx`
+  - Modify `src/features/today/index.ts`
+  - Modify `src/features/weight/index.ts`
+  - Modify `src/features/workouts/index.ts`
 - **执行指令**：
   1. 写 RED：repository key scope、坏 JSON 忽略、清除草稿、Today/Weight/Workouts 恢复/丢弃/提交清除/跨用户隔离。
   2. 运行 RED：RTK 离线草稿命令。
   3. 实现 repository 和页面接入；默认使用 `safeLocalStorage`，storage 不可用时静默降级并保留表单功能。
   4. 运行 GREEN、typecheck、lint、diff check，审阅后提交推送。
+- **Code Status**：done
+- **Actual Write Set**：
+  - `src/platform/offline/BrowserOfflineDraftRepository.ts`
+  - `src/platform/offline/BrowserOfflineDraftRepository.test.ts`
+  - `src/platform/offline/index.ts`
+  - `src/features/today/TodayPage.tsx`
+  - `src/features/today/TodayPage.test.tsx`
+  - `src/features/today/index.ts`
+  - `src/features/weight/WeightPage.tsx`
+  - `src/features/weight/WeightPage.test.tsx`
+  - `src/features/weight/index.ts`
+  - `src/features/workouts/WorkoutsPage.tsx`
+  - `src/features/workouts/WorkoutsPage.test.tsx`
+  - `src/features/workouts/index.ts`
+  - `src/app/App.tsx`
+  - `src/app/App.test.tsx`
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/platform/offline/BrowserOfflineDraftRepository.test.ts src/features/today/TodayPage.test.tsx src/features/weight/WeightPage.test.tsx src/features/workouts/WorkoutsPage.test.tsx` 失败，缺少 `BrowserOfflineDraftRepository`，三个页面均找不到“发现未提交草稿”。
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/app/App.test.tsx -t "connects the today draft repository"` 失败，`/today` 路由未显示草稿提示。
+  - GREEN focused：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/platform/offline/BrowserOfflineDraftRepository.test.ts src/features/today/TodayPage.test.tsx src/features/weight/WeightPage.test.tsx src/features/workouts/WorkoutsPage.test.tsx src/app/App.test.tsx` 通过，5 files / 44 tests。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm test` 通过，44 files / 419 tests。
+  - `git diff --check` 通过。
+- **Evidence**：本地草稿 key 按 `schemaVersion + userId + pageKey` 隔离；Zod strict schema 拒绝额外字段；Today/Weight/Workouts 均支持“发现未提交草稿”提示、恢复/丢弃、成功提交后清除；App 对认证用户注入 user-scoped 草稿仓库。
 
 ### 任务 2：隐私设置与清空应用数据
 

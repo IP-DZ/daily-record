@@ -1,7 +1,7 @@
 import type { CreateWorkoutInput, UpdateWorkoutInput, WorkoutSession } from '@daily-record/contracts';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { calculateWorkoutVolume } from '../../domain/workouts';
 import type { WorkoutsRepository } from '../../platform/workouts';
@@ -84,6 +84,19 @@ function createMemoryWorkoutsRepository(initialSessions: WorkoutSession[] = []):
       sessions.push(copied);
       return copied;
     },
+  };
+}
+
+function createMemoryDraftRepository<TDraft>(initialDraft: TDraft | null) {
+  let draft = initialDraft;
+  return {
+    save: vi.fn(async (nextDraft: TDraft) => {
+      draft = nextDraft;
+    }),
+    load: vi.fn(async () => draft),
+    clear: vi.fn(async () => {
+      draft = null;
+    }),
   };
 }
 
@@ -191,5 +204,35 @@ describe('WorkoutsPage', () => {
     const firstCard = screen.getAllByRole('article', { name: '胸 · 60 分钟' })[0];
     await user.click(within(firstCard).getByRole('button', { name: '删除训练' }));
     expect(await screen.findAllByRole('heading', { name: '胸 · 60 分钟' })).toHaveLength(1);
+  });
+
+  it('lets the user discard an unsubmitted workout draft', async () => {
+    const user = userEvent.setup();
+    const draftRepository = createMemoryDraftRepository({
+      selectedDate: today,
+      bodyParts: '背',
+      durationMinutes: '45',
+      exerciseName: '划船',
+      weightKg: '70',
+      reps: '10',
+      completed: false,
+    });
+
+    render(
+      <WorkoutsPage
+        workouts={createMemoryWorkoutsRepository()}
+        initialDate={today}
+        {...({ draftRepository } as unknown as Record<string, unknown>)}
+      />,
+    );
+
+    expect(await screen.findByText('发现未提交草稿')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '丢弃草稿' }));
+
+    await waitFor(() => expect(draftRepository.clear).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('发现未提交草稿')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('训练部位')).toHaveValue('');
+    expect(screen.getByLabelText('动作名称')).toHaveValue('');
   });
 });

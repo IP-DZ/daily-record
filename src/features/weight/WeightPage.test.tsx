@@ -1,7 +1,7 @@
 import type { CreateWeightEntryInput, UpdateWeightEntryInput, WeightEntry } from '@daily-record/contracts';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { WeightRepository } from '../../platform/weight';
 import { WeightPage } from './WeightPage';
@@ -46,6 +46,19 @@ function createMemoryWeightRepository(initialEntries: WeightEntry[] = []): Weigh
       if (index < 0) throw new Error('missing');
       entries.splice(index, 1);
     },
+  };
+}
+
+function createMemoryDraftRepository<TDraft>(initialDraft: TDraft | null) {
+  let draft = initialDraft;
+  return {
+    save: vi.fn(async (nextDraft: TDraft) => {
+      draft = nextDraft;
+    }),
+    load: vi.fn(async () => draft),
+    clear: vi.fn(async () => {
+      draft = null;
+    }),
   };
 }
 
@@ -153,5 +166,35 @@ describe('WeightPage', () => {
     expect(await screen.findByText('建议每日增加 100 kcal')).toBeInTheDocument();
     expect(screen.getByText('此建议只是估算，不会自动修改你的营养目标。')).toBeInTheDocument();
     expect(screen.getByText(/7 日均重/)).toBeInTheDocument();
+  });
+
+  it('lets the user restore an unsubmitted weight draft and clears it after saving', async () => {
+    const user = userEvent.setup();
+    const draftRepository = createMemoryDraftRepository({
+      selectedDate: today,
+      weightValue: '70.4',
+      note: '晨重草稿',
+    });
+
+    render(
+      <WeightPage
+        weight={createMemoryWeightRepository()}
+        initialDate={today}
+        {...({ draftRepository } as unknown as Record<string, unknown>)}
+      />,
+    );
+
+    expect(await screen.findByText('发现未提交草稿')).toBeInTheDocument();
+    expect(screen.getByLabelText('体重（千克）')).toHaveValue(null);
+
+    await user.click(screen.getByRole('button', { name: '恢复草稿' }));
+    expect(screen.getByLabelText('体重（千克）')).toHaveValue(70.4);
+    expect(screen.getByLabelText('备注')).toHaveValue('晨重草稿');
+
+    await user.click(screen.getByRole('button', { name: '保存体重' }));
+
+    expect(await screen.findByRole('heading', { name: '70.4 kg' })).toBeInTheDocument();
+    await waitFor(() => expect(draftRepository.clear).toHaveBeenCalledTimes(1));
+    await expect(draftRepository.load()).resolves.toBeNull();
   });
 });

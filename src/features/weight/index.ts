@@ -1,1 +1,1 @@
-export { WeightPage } from './WeightPage';
+export { WeightPage, weightDraftSchema, type WeightDraft } from './WeightPage';
