@@ -375,6 +375,54 @@ describe('App', () => {
     expect(nutritionGoals.listByDateRange).toHaveBeenCalled();
   });
 
+  it('keeps the integrated trends route behind the authenticated session', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn().mockResolvedValue(undefined),
+      verifyEmailCode: vi.fn().mockResolvedValue({ userId: 'user-1' }),
+      currentUser: vi.fn().mockResolvedValue(null),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+
+    render(
+      <MemoryRouter initialEntries={['/trends']}>
+        <App
+          auth={auth}
+          meals={createMealsRepository()}
+          nutritionGoals={createNutritionGoalsRepository()}
+          weight={createWeightRepository()}
+          workouts={createWorkoutsRepository()}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '注册或登录' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '综合趋势' })).not.toBeInTheDocument();
+  });
+
+  it('renders the integrated trends page after auth restores', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn(),
+      verifyEmailCode: vi.fn(),
+      currentUser: vi.fn().mockResolvedValue({ userId: 'user-integrated-trends' }),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+
+    render(
+      <MemoryRouter initialEntries={['/trends']}>
+        <App
+          auth={auth}
+          meals={createMealsRepository()}
+          nutritionGoals={createNutritionGoalsRepository()}
+          weight={createWeightRepository()}
+          workouts={createWorkoutsRepository()}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '综合趋势' })).toBeInTheDocument();
+    expect(screen.getByText('趋势和建议均为估算，不构成医疗建议。')).toBeInTheDocument();
+  });
+
   it('shows a recoverable notice when browser storage is unavailable', async () => {
     Object.defineProperty(window, 'localStorage', {
       configurable: true,

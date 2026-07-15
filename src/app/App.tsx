@@ -5,6 +5,7 @@ import { OnboardingPage } from '../features/onboarding';
 import { TodayPage } from '../features/today';
 import { PhotoMealPage } from '../features/photo-meal';
 import { NutritionTrendsPage } from '../features/nutrition-trends';
+import { TrendsPage } from '../features/trends';
 import { WeightPage } from '../features/weight';
 import { WorkoutsPage } from '../features/workouts';
 import type { AuthPort } from '../platform/auth';
@@ -363,6 +364,35 @@ export function App({
       营养趋势需要登录后使用；请先配置 CloudBase 或打开测试平台。
     </main>
   );
+  const trendsPage = (
+    auth !== null
+    && meals !== null
+    && nutritionGoals !== null
+    && weight !== null
+    && workouts !== null
+  ) ? (
+    <AuthGate auth={auth}>
+      <TrendsPage
+        meals={meals}
+        nutritionGoals={nutritionGoals}
+        weight={weight}
+        workouts={workouts}
+      />
+    </AuthGate>
+  ) : publicConfig !== null && currentPlatformState.status === 'error' ? (
+    <main className="auth-loading">
+      <p role="alert">认证服务加载失败，请稍后重试。</p>
+      <button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>
+        重新连接
+      </button>
+    </main>
+  ) : publicConfig !== null ? (
+    <main className="auth-loading" role="status">正在连接认证服务…</main>
+  ) : (
+    <main className="auth-loading" role="alert">
+      综合趋势需要登录后使用；请先配置 CloudBase 或打开测试平台。
+    </main>
+  );
 
   return (
     <>
@@ -377,6 +407,7 @@ export function App({
         <Route path="/today" element={todayPage} />
         <Route path="/photo-meal" element={photoMealPage} />
         <Route path="/nutrition-trends" element={nutritionTrendsPage} />
+        <Route path="/trends" element={trendsPage} />
         <Route path="/weight" element={weightPage} />
         <Route path="/workouts" element={workoutsPage} />
         <Route path="*" element={<WelcomePage />} />

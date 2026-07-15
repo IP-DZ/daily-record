@@ -182,6 +182,26 @@ graph TD
   - Create `src/features/trends/index.ts`
   - Modify `src/app/App.tsx`
   - Modify `src/app/App.test.tsx`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `src/features/trends/TrendsPage.test.tsx`
+  - `src/features/trends/TrendsPage.tsx`
+  - `src/features/trends/trends.css`
+  - `src/features/trends/index.ts`
+  - `src/app/App.tsx`
+  - `src/app/App.test.tsx`
+- **Accepted Change Baseline**：
+  - 新增 `/trends` 综合趋势鉴权页面，默认展示结束日前 28 天，支持“营养 / 体重 / 训练”三段切换。
+  - 页面组合 `MealsRepository`、`NutritionGoalsRepository`、`WeightRepository`、`WorkoutsRepository`，并复用 `buildDailyNutritionTrend`、`buildWeeklyNutritionTrend`、`buildWeightTrend`、`buildWorkoutWeekTrend`；未新增平台读取、数据库、RPC 或图表依赖。
+  - App route 接入 `/trends`，未登录显示登录页，缺配置/加载失败沿用既有 fallback。
+  - 空营养目标、空体重、空训练均显示明确空状态，不伪造趋势；页面文案包含“趋势和建议均为估算，不构成医疗建议。”。
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/features/trends/TrendsPage.test.tsx src/app/App.test.tsx` 先因 `TrendsPage` 和 `/trends` route 不存在失败。
+  - GREEN：同命令通过，2 个测试文件、23 条测试通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `git diff --check` 通过。
+- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-15-integrated-trends-ui-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。
 - **执行指令**：
   1. 写 RED 组件/App 测试：未登录、登录后加载、三段切换、空状态、营养目标缺失、体重均线不足、训练周汇总。
   2. 运行 RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/features/trends/TrendsPage.test.tsx src/app/App.test.tsx`。
