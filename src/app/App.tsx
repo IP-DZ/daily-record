@@ -87,6 +87,20 @@ const defaultPlatformLoader: PlatformLoader = async (config) => {
   return createCloudBasePlatform(config);
 };
 
+function isTestPlatformRequested(): boolean {
+  if (import.meta.env.MODE !== 'test') return false;
+  return new URLSearchParams(window.location.search).get('test-platform') === '1';
+}
+
+function resolvePlatformLoader(platformLoader: PlatformLoader): PlatformLoader {
+  if (!isTestPlatformRequested()) return platformLoader;
+
+  return async () => {
+    const { createTestPlatform } = await import('../platform/testing/createTestPlatform');
+    return createTestPlatform();
+  };
+}
+
 export function App({
   auth: injectedAuth,
   profileSettings: injectedProfileSettings,
@@ -99,15 +113,10 @@ export function App({
   cloudBaseEnv = import.meta.env,
   platformLoader = defaultPlatformLoader,
 }: AppProps = {}) {
-  const testPlatformRequested = import.meta.env.MODE === 'test'
-    && new URLSearchParams(window.location.search).get('test-platform') === '1';
+  const testPlatformRequested = isTestPlatformRequested();
   const selectedPlatformLoader = useMemo<PlatformLoader>(() => {
-    if (!testPlatformRequested) return platformLoader;
-    return async () => {
-      const { createTestPlatform } = await import('../platform/testing/createTestPlatform');
-      return createTestPlatform();
-    };
-  }, [platformLoader, testPlatformRequested]);
+    return resolvePlatformLoader(platformLoader);
+  }, [platformLoader]);
   const settings = useMemo(() => {
     const storage = safeLocalStorage();
     if (storage === null) {

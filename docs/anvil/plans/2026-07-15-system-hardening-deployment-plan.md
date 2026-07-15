@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的隐私、离线、PWA、部署与验收需求、主计划任务 9、用户已批准的持续开发目标
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：Task 1「离线草稿与恢复确认」与 Task 2「隐私设置与清空应用数据」已完成本地实现、RED/GREEN 验证、全量单测、lint、typecheck 和 diff check，下一步执行 Task 3：PWA/部署运维加固。真实 CloudBase、真实视觉模型和大陆网络 smoke 仍需要仓库所有者提供隔离环境后执行；本计划会保留 blocker 和可操作 next step，不伪报通过。
+- **Resume Point**：Task 1「离线草稿与恢复确认」、Task 2「隐私设置与清空应用数据」与 Task 3「PWA/部署运维加固」已完成本地实现、RED/GREEN 验证、全量单测、lint、typecheck、production build、构建产物扫描和 diff check。下一步执行 Task 4：系统 E2E、主计划证据回写与最终审阅。真实 CloudBase、真实视觉模型和大陆网络 smoke 仍需要仓库所有者提供隔离环境后执行；本计划会保留 blocker 和可操作 next step，不伪报通过。
 
 ## 模块边界
 
@@ -263,7 +263,7 @@ graph TD
 - **Parallel Group**：G3
 - **Execution**：serial
 - **Parallel Blocker**：构建产物安全和运维文档
-- **Ownership**：`vite.config.ts`、`src/app/PwaUpdatePrompt.*`、`tests/security/buildArtifactSafety.test.ts`、`docs/operations/**`, `.env.example`
+- **Ownership**：`vite.config.ts`、`src/app/PwaUpdatePrompt.*`、`src/app/App.tsx`（因 RED 证明生产包泄漏 test-platform chunk，需剥离测试平台动态导入）、`tests/security/buildArtifactSafety.test.ts`、`docs/operations/**`, `.env.example`
 - **Read Set**：现有 PWA 配置、运维文档、构建产物
 - **Write Set**：同 Ownership
 - **描述**：补齐部署文档、环境变量样例、构建产物安全检查和 PWA 缓存边界验收。
@@ -284,6 +284,27 @@ graph TD
   2. 运行 RED：RTK PWA/部署命令。
   3. 补文档和必要小改动；不得把真实密钥写入样例。
   4. 运行 GREEN、build、typecheck、lint、diff check，审阅后提交推送。
+- **Code Status**：done
+- **Actual Write Set**：
+  - `.env.example`
+  - `vite.config.ts`
+  - `src/app/App.tsx`
+  - `src/app/PwaUpdatePrompt.tsx`
+  - `src/app/PwaUpdatePrompt.test.tsx`
+  - `tests/security/buildArtifactSafety.test.ts`
+  - `docs/operations/deployment.md`
+  - `docs/operations/local-development.md`
+  - `docs/operations/cloudbase-test-environment.md`
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts src/app/PwaUpdatePrompt.test.tsx` 失败，暴露缺少 `docs/operations/deployment.md`、`.env.example` 无公开变量安全说明、`vite.config.ts` 无 API/test endpoint navigation denylist、PWA 离线提示未说明缓存边界，且现有 `dist` 含 `createTestPlatform` chunk、`__daily-record-test-platform` 与 `test-platform-client`。
+  - GREEN focused：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts src/app/PwaUpdatePrompt.test.tsx src/app/App.test.tsx` 通过，3 files / 30 tests。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm test` 通过，48 files / 432 tests。
+  - `pnpm_config_verify_deps_before_run=warn pnpm build` 通过；生产构建不再生成 `createTestPlatform` chunk，初始 `index` gzip 112.79 KB，CloudBase 动态 chunk gzip 181.15 KB；Vite >500 KB chunk warning 记录为后续优化，不阻断本任务预算。
+  - `pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts` 通过，1 file / 4 tests，扫描 `dist/` 未发现服务端密钥标识、固定测试 OTP、test-platform endpoint、test-platform client 或测试邮箱。
+  - `git diff --check` 通过。
+- **Evidence**：新增生产构建产物安全扫描测试，要求部署文档、大陆网络 smoke、LCP/包体预算、真实 blocker、env 样例和 Workbox 边界可自动验证；生产构建通过 `strip-test-platform-from-production` Vite pre-transform 剥离 test platform loader，`vite build` 后 dist 不含测试端点/固定验证码/测试邮箱/服务端 secret marker；PWA 离线提示明确只缓存静态应用外壳，不缓存餐食照片或账号接口；运维文档补齐 CloudBase 静态托管、自托管、中国大陆网络 smoke 和 blocker owner/next step。
 
 ### 任务 4：系统 E2E、状态更新与最终审阅
 

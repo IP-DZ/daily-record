@@ -62,6 +62,7 @@ describe('PwaUpdatePrompt', () => {
     render(<PwaUpdatePrompt />);
 
     expect(screen.getByText('应用已可离线使用')).toBeInTheDocument();
+    expect(screen.getByText('已缓存静态应用外壳，不会离线缓存你的餐食照片或账号接口。')).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole('button', { name: '关闭离线提示' }));
 
     expect(screen.queryByText('应用已可离线使用')).not.toBeInTheDocument();

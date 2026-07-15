@@ -6,7 +6,7 @@
 
 ## 公开构建变量
 
-在本地 shell 或不持久化的 CI secret 中配置：
+在本地 shell 或不持久化的 CI secret 中配置；变量名与仓库根目录 `.env.example` 保持一致：
 
 ```bash
 export VITE_CLOUDBASE_ENV_ID='<isolated-environment-id>'
@@ -15,6 +15,8 @@ export VITE_CLOUDBASE_REGION='ap-shanghai'
 ```
 
 `VITE_*` 只允许客户端公开配置。禁止使用 `CLOUDBASE_APIKEY`、`TENCENTCLOUD_SECRET_ID`、`TENCENTCLOUD_SECRET_KEY` 或其他服务端凭据。
+
+部署静态产物和大陆网络 smoke 的完整步骤见 [部署与上线验收](./deployment.md)。本文只负责 CloudBase 隔离环境和真实 OTP/RLS 证据，不记录真实邮箱、验证码、session、token、照片对象 key 或模型响应原文。
 
 ## 环境准备
 
@@ -52,3 +54,5 @@ export VITE_CLOUDBASE_REGION='ap-shanghai'
 ## 已知 blocker 与负责人
 
 当前仓库没有提供隔离环境 ID、Publishable Key 和两个隔离邮箱，因此真实 OTP、CAPTCHA/限流交互、CloudBase 双 session 并发与跨设备 smoke 仍为 `blocked`。负责人为仓库所有者；下一步是按本文档完成隔离环境配置，再运行 manual spec 并记录不含账号或 token 的结果摘要。
+
+如果同时要验收首版上线，请在 manual spec 通过后继续执行 `docs/operations/deployment.md` 的中国大陆网络 smoke 和性能预算检查；不要用本地 test-platform E2E 代替真实云环境结论。
