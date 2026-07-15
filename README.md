@@ -2,27 +2,67 @@
 
 面向中国大陆网络环境的个人饮食、体重与力量训练记录 PWA。
 
-## 计划能力
+## 当前状态
+
+首版本地实现、自动化验证、移动端 E2E、Anvil 审阅和 GitHub 推送已完成。当前分支：
+
+- GitHub 分支：`feature/cloudbase-auth`
+- 本地首版功能基线提交：`390ee524 test: add system hardening e2e`
+- 主计划：[`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`](docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md)
+- 系统加固计划：[`docs/anvil/plans/2026-07-15-system-hardening-deployment-plan.md`](docs/anvil/plans/2026-07-15-system-hardening-deployment-plan.md)
+
+真实 CloudBase、真实视觉模型和中国大陆网络 smoke 仍需要仓库所有者提供隔离环境、模型配置、测试邮箱和实际网络设备后执行；本仓库不会用本地 test platform 伪报真实云环境通过。
+
+## 已实现能力
 
 - 根据成年人身体资料估算增肌期热量与三大营养素目标，并允许手动调整。
 - 记录每日餐次、食物、热量、碳水、蛋白质和脂肪。
-- 上传饮食照片，由国内视觉模型生成可编辑的营养估算。
-- 记录训练动作、组数、次数和重量，并查看训练趋势。
-- 使用邮箱验证码登录，在不同设备间同步数据。
+- 上传饮食照片，经服务端云函数/视觉模型处理后生成可编辑营养估算；确认前不计入今日汇总。
+- 记录体重、训练动作、组数、次数和重量，并查看营养、体重、训练与综合趋势。
+- 使用邮箱验证码登录，通过 CloudBase 平台端口同步用户数据。
+- 支持今日餐食、体重和训练表单的本地离线草稿恢复/丢弃。
+- 提供隐私设置页，可清空当前账号在本应用内的业务数据。
+- PWA 更新提示、离线提示、生产构建产物安全扫描和部署文档已补齐。
 
-## 当前状态
+## 本地开发
 
-项目处于需求复核阶段，尚未开始实现。当前需求源：
+环境要求：Node.js `^20.19.0` 或 `>=22.12.0`，pnpm `11.7.0`。
 
-- [`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`](docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md)
+```bash
+pnpm install
+pnpm dev
+```
 
-需求经用户书面确认后，下一步是编写可执行实施计划。
+详细说明见 [`docs/operations/local-development.md`](docs/operations/local-development.md)。
 
-## 技术方向
+## 验证命令
+
+本地首版最后一轮验证使用以下路径：
+
+```bash
+pnpm_config_verify_deps_before_run=warn pnpm lint
+pnpm_config_verify_deps_before_run=warn pnpm typecheck
+pnpm_config_verify_deps_before_run=warn pnpm test
+pnpm_config_verify_deps_before_run=warn pnpm build
+pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts
+pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line
+```
+
+最近证据已写回 Anvil 计划：48 个 Vitest 文件通过（431 passed / 1 skipped），production build 通过，构建产物安全扫描 4/4，通过移动端 E2E 8 passed / 1 real CloudBase manual skipped。
+
+## 技术栈
 
 - React + TypeScript + Vite PWA
 - 腾讯云 CloudBase：静态托管、邮箱认证、PostgreSQL、云函数和私有存储
-- CloudBase 国内多模态模型，业务层保留模型供应商适配接口
+- CloudBase 国内多模态模型/云函数处理图片餐食估算，业务层保留模型供应商适配接口
+
+## 部署与真实 smoke
+
+- 部署步骤：[`docs/operations/deployment.md`](docs/operations/deployment.md)
+- CloudBase 隔离测试环境：[`docs/operations/cloudbase-test-environment.md`](docs/operations/cloudbase-test-environment.md)
+- 环境变量样例：`.env.example`
+
+真实 smoke 必须在隔离 CloudBase 环境、真实测试邮箱、服务端模型配置和中国大陆网络设备准备后执行。执行摘要不得记录真实邮箱、验证码、session、token、照片对象 key 或模型响应原文。
 
 ## 安全原则
 
