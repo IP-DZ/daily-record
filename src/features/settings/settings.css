@@ -1,0 +1,47 @@
+.settings-page {
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.settings-header,
+.settings-panel {
+  max-width: 48rem;
+  margin: 0 auto 1.5rem;
+}
+
+.settings-eyebrow {
+  color: #5b6472;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.settings-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.settings-panel label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.settings-panel input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+}
+
+.settings-message {
+  color: #166534;
+}
+
+.settings-error {
+  color: #b91c1c;
+}

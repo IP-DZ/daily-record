@@ -28,6 +28,7 @@ import {
 import { summarizeMeals } from '../../domain/meals';
 import { candidateToMealInput } from '../../domain/photoMeal';
 import { calculateWorkoutVolume } from '../../domain/workouts';
+import type { AccountRepository } from '../account';
 import type { AuthPort } from '../auth';
 import type { MealsRepository } from '../meals';
 import type { NutritionGoalsRepository } from '../nutritionGoals';
@@ -48,6 +49,7 @@ type TestPlatform = {
   workouts: WorkoutsRepository;
   photoMeals: PhotoMealAnalysisRepository;
   nutritionGoals: NutritionGoalsRepository;
+  account: AccountRepository;
 };
 
 function toDraft(value: ProfileSettingsPayload): ProfileSettingsDraft {
@@ -516,5 +518,18 @@ export function createTestPlatform(fetcher: Fetcher = fetch): TestPlatform {
     },
   };
 
-  return { auth, profileSettings, meals, weight, workouts, photoMeals, nutritionGoals };
+  const account: AccountRepository = {
+    async deleteMyApplicationData() {
+      const userId = await requireCurrentUserId();
+      await call(fetcher, 'delete-application-data');
+      mealsByUserId.delete(userId);
+      weightByUserId.delete(userId);
+      workoutsByUserId.delete(userId);
+      photoMealAnalysesByUserId.delete(userId);
+      nutritionGoalsByUserId.delete(userId);
+      return { deleted: true };
+    },
+  };
+
+  return { auth, profileSettings, meals, weight, workouts, photoMeals, nutritionGoals, account };
 }

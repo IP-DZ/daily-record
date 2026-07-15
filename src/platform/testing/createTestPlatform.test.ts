@@ -58,13 +58,16 @@ function responseOf(value: unknown): Response {
 
 function createAuthFetcher() {
   const sessionByClientId = new Map<string, string | null>();
+  const profileByUserId = new Map<string, unknown>();
   return vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body ?? '{}')) as {
       operation?: string;
       clientId?: string;
       email?: string;
+      value?: unknown;
     };
     const clientId = body.clientId ?? 'missing-client';
+    const currentUserId = sessionByClientId.get(clientId) ?? null;
     if (body.operation === 'request-code') return responseOf({});
     if (body.operation === 'verify-code') {
       const userId = body.email === 'b@example.test' ? 'user-b' : 'user-a';
@@ -72,15 +75,23 @@ function createAuthFetcher() {
       return responseOf({ user: { userId } });
     }
     if (body.operation === 'current-user') {
-      const userId = sessionByClientId.get(clientId) ?? null;
-      return responseOf({ user: userId === null ? null : { userId } });
+      return responseOf({ user: currentUserId === null ? null : { userId: currentUserId } });
     }
     if (body.operation === 'sign-out') {
       sessionByClientId.set(clientId, null);
       return responseOf({});
     }
-    if (body.operation === 'load-profile') return responseOf({ value: null });
-    if (body.operation === 'save-profile') return responseOf({});
+    if (body.operation === 'load-profile') {
+      return responseOf({ value: currentUserId === null ? null : profileByUserId.get(currentUserId) ?? null });
+    }
+    if (body.operation === 'save-profile') {
+      if (currentUserId !== null) profileByUserId.set(currentUserId, body.value);
+      return responseOf({});
+    }
+    if (body.operation === 'delete-application-data') {
+      if (currentUserId !== null) profileByUserId.delete(currentUserId);
+      return responseOf({ deleted: true });
+    }
     return new Response('{}', { status: 400 });
   });
 }
@@ -422,5 +433,69 @@ describe('createTestPlatform', () => {
       mealDate,
       items: analysis.candidates,
     })).rejects.toThrow('Photo meal analysis cannot be confirmed');
+  });
+
+  it('clears only the current signed-in user application data', async () => {
+    const platform = createTestPlatform(createAuthFetcher());
+
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
+    await platform.profileSettings.save({
+      inputs: {
+        age: 30, sex: 'male', heightCm: 175, weightKg: 70,
+        activityLevel: 'moderate', proteinGramsPerKg: 1.8,
+        fatCalorieRatio: 0.25, surplusRatio: 0.1,
+      },
+      trainingDaysPerWeek: 3,
+      trainingExperience: 'intermediate',
+      targets: {
+        restingKcal: 1648.75, maintenanceKcal: 2555.5625, caloriesKcal: 2811.11875,
+        proteinGrams: 126, fatGrams: 78.0866319444, carbsGrams: 401.084765625,
+      },
+    });
+    const aMeal = await platform.meals.create(mealInput('鸡胸肉饭', {
+      caloriesKcal: 620,
+      proteinGrams: 42,
+      fatGrams: 16,
+      carbsGrams: 78,
+    }));
+    await platform.weight.create({ entryDate: weightDate, weightKg: 70.4, note: '晨重' });
+    await platform.workouts.create(workoutInput('卧推', 60));
+    await platform.photoMeals.create({ mealDate, requestId: 'request-a', photo: preparedPhoto });
+
+    await platform.auth.verifyEmailCode('b@example.test', '246810');
+    await platform.profileSettings.save({
+      inputs: {
+        age: 31, sex: 'male', heightCm: 178, weightKg: 73,
+        activityLevel: 'moderate', proteinGramsPerKg: 1.8,
+        fatCalorieRatio: 0.25, surplusRatio: 0.1,
+      },
+      trainingDaysPerWeek: 4,
+      trainingExperience: 'intermediate',
+      targets: {
+        restingKcal: 1700, maintenanceKcal: 2635, caloriesKcal: 2898.5,
+        proteinGrams: 131.4, fatGrams: 80.5138888889, carbsGrams: 411.7569444444,
+      },
+    });
+    const bMeal = await platform.meals.create(mealInput('牛肉饭', {
+      caloriesKcal: 700,
+      proteinGrams: 45,
+      fatGrams: 22,
+      carbsGrams: 86,
+    }));
+
+    await platform.auth.verifyEmailCode('a@example.test', '246810');
+    await expect(platform.account.deleteMyApplicationData()).resolves.toEqual({ deleted: true });
+    await expect(platform.meals.listByDate(mealDate)).resolves.toMatchObject({ meals: [] });
+    await expect(platform.weight.listByDateRange('2026-07-01', '2026-07-31')).resolves.toEqual([]);
+    await expect(platform.workouts.listByDateRange('2026-07-01', '2026-07-31')).resolves.toEqual([]);
+    await expect(platform.meals.delete(aMeal.id)).rejects.toThrow('Meal not found');
+    await expect(platform.profileSettings.load()).resolves.toBeNull();
+
+    await platform.auth.verifyEmailCode('b@example.test', '246810');
+    await expect(platform.profileSettings.load()).resolves.toMatchObject({
+      inputs: expect.objectContaining({ age: 31, weightKg: 73 }),
+      trainingDaysPerWeek: 4,
+    });
+    await expect(platform.meals.listByDate(mealDate)).resolves.toMatchObject({ meals: [bMeal] });
   });
 });

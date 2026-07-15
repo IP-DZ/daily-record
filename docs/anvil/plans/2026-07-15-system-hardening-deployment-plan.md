@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的隐私、离线、PWA、部署与验收需求、主计划任务 9、用户已批准的持续开发目标
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：Task 1「离线草稿与恢复确认」已完成本地实现、RED/GREEN 验证、全量单测、lint、typecheck 和 diff check，下一步执行 Task 2：隐私设置与清空应用数据。真实 CloudBase、真实视觉模型和大陆网络 smoke 仍需要仓库所有者提供隔离环境后执行；本计划会保留 blocker 和可操作 next step，不伪报通过。
+- **Resume Point**：Task 1「离线草稿与恢复确认」与 Task 2「隐私设置与清空应用数据」已完成本地实现、RED/GREEN 验证、全量单测、lint、typecheck 和 diff check，下一步执行 Task 3：PWA/部署运维加固。真实 CloudBase、真实视觉模型和大陆网络 smoke 仍需要仓库所有者提供隔离环境后执行；本计划会保留 blocker 和可操作 next step，不伪报通过。
 
 ## 模块边界
 
@@ -227,6 +227,35 @@ graph TD
   3. 实现 `delete_my_application_data()` fixed search_path definer RPC，只使用 `auth.uid()`，删除所有当前用户业务表；adapter 不传 userId。
   4. 实现 `/settings`；文案明确“清空应用数据，不删除登录身份”。
   5. 运行 GREEN、typecheck、lint、diff check，审阅后提交推送。
+- **Code Status**：done
+- **Actual Write Set**：
+  - `cloud/database/migrations/0006_account_deletion.sql`
+  - `tests/security/accountDeletionIsolation.test.ts`
+  - `tests/security/migrationShape.test.ts`
+  - `tests/security/pgliteAuthHarness.ts`
+  - `src/platform/account/AccountRepository.ts`
+  - `src/platform/account/index.ts`
+  - `src/platform/cloudbase/CloudBaseAccountRepository.ts`
+  - `src/platform/cloudbase/CloudBaseAccountRepository.test.ts`
+  - `src/platform/cloudbase/createCloudBasePlatform.ts`
+  - `src/platform/cloudbase/index.ts`
+  - `src/platform/testing/createTestPlatform.ts`
+  - `src/platform/testing/createTestPlatform.test.ts`
+  - `src/features/settings/SettingsPage.tsx`
+  - `src/features/settings/SettingsPage.test.tsx`
+  - `src/features/settings/settings.css`
+  - `src/features/settings/index.ts`
+  - `src/app/App.tsx`
+  - `src/app/App.test.tsx`
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/accountDeletionIsolation.test.ts tests/security/migrationShape.test.ts src/platform/cloudbase/CloudBaseAccountRepository.test.ts src/platform/testing/createTestPlatform.test.ts src/features/settings/SettingsPage.test.tsx src/app/App.test.tsx` 失败，缺少 `delete_my_application_data()`、`CloudBaseAccountRepository`、`SettingsPage`、`account` platform shape 和 `/settings` route。
+  - REVIEW RED：加严 `src/platform/testing/createTestPlatform.test.ts` 后，`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/platform/testing/createTestPlatform.test.ts` 失败，证明测试平台清空当前用户后仍能加载 user-a profile；修复后同一命令通过，1 file / 11 tests。
+  - GREEN focused：同一命令通过，6 files / 45 tests。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm test` 通过，47 files / 428 tests。
+  - `git diff --check` 通过。
+- **Evidence**：新增 `delete_my_application_data()` fixed `search_path` definer RPC，不接受 `user_id` 参数，只使用 `auth.uid()` 删除当前用户 profiles/nutrition goals、meals、weight、workouts/children 和 photo meal analyses；CloudBase adapter 调用 RPC 不传身份；test platform 只清当前登录用户内存数据，并通过 `delete-application-data` 测试操作同步清当前用户 profile，不影响另一个用户；`/settings` 鉴权页面要求输入“清空我的数据”才允许危险操作，并明确“清空应用数据，不删除登录身份”。
 
 ### 任务 3：PWA/部署运维加固
 

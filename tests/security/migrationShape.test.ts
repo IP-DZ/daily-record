@@ -165,11 +165,12 @@ describe('production migration security shape', () => {
           'get_my_photo_meal_analysis',
           'confirm_my_photo_meal_analysis',
           'discard_my_photo_meal_analysis',
+          'delete_my_application_data',
           'list_my_nutrition_goals_by_date_range'
         )
       ORDER BY p.proname
     `);
-    expect(functions.rows).toHaveLength(21);
+    expect(functions.rows).toHaveLength(22);
     for (const fn of functions.rows) {
       expect(fn.prosecdef).toBe(true);
       expect(fn.proconfig).toContain('search_path=pg_catalog, public, auth');
@@ -225,6 +226,7 @@ describe('production migration security shape', () => {
     expect(functions.rows.find(({ proname }) => proname === 'discard_my_photo_meal_analysis')?.arguments).toBe(
       'analysis_id uuid',
     );
+    expect(functions.rows.find(({ proname }) => proname === 'delete_my_application_data')?.arguments).toBe('');
 
     const executePrivileges = await db.query<{ grantee: string; routine_name: string }>(`
       SELECT grantee, routine_name
@@ -251,6 +253,7 @@ describe('production migration security shape', () => {
           'get_my_photo_meal_analysis',
           'confirm_my_photo_meal_analysis',
           'discard_my_photo_meal_analysis',
+          'delete_my_application_data',
           'list_my_nutrition_goals_by_date_range'
         )
         AND grantee IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
@@ -264,6 +267,7 @@ describe('production migration security shape', () => {
       { grantee: 'authenticated', routine_name: 'create_my_photo_meal_analysis' },
       { grantee: 'authenticated', routine_name: 'create_my_weight_entry' },
       { grantee: 'authenticated', routine_name: 'create_my_workout' },
+      { grantee: 'authenticated', routine_name: 'delete_my_application_data' },
       { grantee: 'authenticated', routine_name: 'delete_my_meal' },
       { grantee: 'authenticated', routine_name: 'delete_my_weight_entry' },
       { grantee: 'authenticated', routine_name: 'delete_my_workout' },

@@ -3,6 +3,7 @@ import { Link, Route, Routes } from 'react-router-dom';
 import type { z } from 'zod';
 import { AuthGate } from '../features/auth';
 import { OnboardingPage } from '../features/onboarding';
+import { SettingsPage } from '../features/settings';
 import { TodayPage, todayMealDraftSchema } from '../features/today';
 import { PhotoMealPage } from '../features/photo-meal';
 import { NutritionTrendsPage } from '../features/nutrition-trends';
@@ -24,6 +25,7 @@ import {
 } from '../platform/settings';
 import { BrowserOfflineDraftRepository } from '../platform/offline';
 import { safeLocalStorage } from '../platform/storage/safeLocalStorage';
+import type { AccountRepository } from '../platform/account';
 import { PwaUpdatePrompt } from './PwaUpdatePrompt';
 import './styles.css';
 
@@ -58,6 +60,7 @@ interface AppProps {
   photoMeals?: PhotoMealAnalysisRepository;
   weight?: WeightRepository;
   workouts?: WorkoutsRepository;
+  account?: AccountRepository;
   cloudBaseEnv?: Readonly<Record<string, string | boolean | undefined>>;
   platformLoader?: PlatformLoader;
 }
@@ -70,6 +73,7 @@ type Platform = {
   photoMeals: PhotoMealAnalysisRepository;
   weight: WeightRepository;
   workouts: WorkoutsRepository;
+  account: AccountRepository;
 };
 type PlatformLoader = (config: CloudBasePublicConfig) => Promise<Platform>;
 const TEST_PLATFORM_CONFIG: CloudBasePublicConfig = {
@@ -91,6 +95,7 @@ export function App({
   photoMeals: injectedPhotoMeals,
   weight: injectedWeight,
   workouts: injectedWorkouts,
+  account: injectedAccount,
   cloudBaseEnv = import.meta.env,
   platformLoader = defaultPlatformLoader,
 }: AppProps = {}) {
@@ -165,6 +170,7 @@ export function App({
     photoMeals: PhotoMealAnalysisRepository | null;
     weight: WeightRepository | null;
     workouts: WorkoutsRepository | null;
+    account: AccountRepository | null;
   }>(() => ({
     config: publicConfig,
     status: publicConfig === null ? 'idle' : 'loading',
@@ -175,6 +181,7 @@ export function App({
     photoMeals: null,
     weight: null,
     workouts: null,
+    account: null,
   }));
   const [loadAttempt, setLoadAttempt] = useState(0);
 
@@ -192,6 +199,7 @@ export function App({
       photoMeals: null,
       weight: null,
       workouts: null,
+      account: null,
     });
     void selectedPlatformLoader(publicConfig)
       .then((platform) => {
@@ -205,6 +213,7 @@ export function App({
           photoMeals: platform.photoMeals,
           weight: platform.weight,
           workouts: platform.workouts,
+          account: platform.account,
         });
       })
       .catch(() => {
@@ -218,6 +227,7 @@ export function App({
           photoMeals: null,
           weight: null,
           workouts: null,
+          account: null,
         });
       });
     return () => {
@@ -237,6 +247,7 @@ export function App({
       photoMeals: null,
       weight: null,
       workouts: null,
+      account: null,
     };
   const auth = injectedAuth ?? currentPlatformState.auth;
   const profileSettings = injectedProfileSettings ?? currentPlatformState.profileSettings;
@@ -245,6 +256,7 @@ export function App({
   const photoMeals = injectedPhotoMeals ?? currentPlatformState.photoMeals;
   const weight = injectedWeight ?? currentPlatformState.weight;
   const workouts = injectedWorkouts ?? currentPlatformState.workouts;
+  const account = injectedAccount ?? currentPlatformState.account;
   const configurationMissing = injectedAuth === undefined
     && !testPlatformRequested
     && publicConfig === null;
@@ -423,6 +435,24 @@ export function App({
       综合趋势需要登录后使用；请先配置 CloudBase 或打开测试平台。
     </main>
   );
+  const settingsPage = auth !== null && account !== null ? (
+    <AuthGate auth={auth}>
+      <SettingsPage account={account} />
+    </AuthGate>
+  ) : publicConfig !== null && currentPlatformState.status === 'error' ? (
+    <main className="auth-loading">
+      <p role="alert">认证服务加载失败，请稍后重试。</p>
+      <button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>
+        重新连接
+      </button>
+    </main>
+  ) : publicConfig !== null ? (
+    <main className="auth-loading" role="status">正在连接认证服务…</main>
+  ) : (
+    <main className="auth-loading" role="alert">
+      隐私设置需要登录后使用；请先配置 CloudBase 或打开测试平台。
+    </main>
+  );
 
   return (
     <>
@@ -438,6 +468,7 @@ export function App({
         <Route path="/photo-meal" element={photoMealPage} />
         <Route path="/nutrition-trends" element={nutritionTrendsPage} />
         <Route path="/trends" element={trendsPage} />
+        <Route path="/settings" element={settingsPage} />
         <Route path="/weight" element={weightPage} />
         <Route path="/workouts" element={workoutsPage} />
         <Route path="*" element={<WelcomePage />} />

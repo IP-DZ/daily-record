@@ -102,6 +102,12 @@ function createPhotoMealRepository(): PhotoMealAnalysisRepository {
   } as PhotoMealAnalysisRepository;
 }
 
+function createAccountRepository() {
+  return {
+    deleteMyApplicationData: vi.fn().mockResolvedValue({ deleted: true }),
+  };
+}
+
 beforeEach(() => {
   Object.defineProperty(window, 'localStorage', {
     configurable: true,
@@ -453,6 +459,24 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: '综合趋势' })).toBeInTheDocument();
     expect(screen.getByText('趋势和建议均为估算，不构成医疗建议。')).toBeInTheDocument();
+  });
+
+  it('keeps the settings route behind the authenticated session and renders privacy controls', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn(),
+      verifyEmailCode: vi.fn(),
+      currentUser: vi.fn().mockResolvedValue({ userId: 'user-settings' }),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+
+    render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <App auth={auth} account={createAccountRepository()} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '隐私与设置' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '清空我的应用数据' })).toBeDisabled();
   });
 
   it('shows a recoverable notice when browser storage is unavailable', async () => {
