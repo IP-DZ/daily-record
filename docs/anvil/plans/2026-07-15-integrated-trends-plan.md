@@ -140,6 +140,22 @@ graph TD
   - Create `src/domain/trends/overviewTrends.ts`
   - Create `src/domain/trends/overviewTrends.test.ts`
   - Modify `src/domain/trends/index.ts`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `src/domain/trends/overviewTrends.ts`
+  - `src/domain/trends/overviewTrends.test.ts`
+  - `src/domain/trends/index.ts`
+- **Accepted Change Baseline**：
+  - 新增 `buildWeightTrend`，按日期排序生成体重点；最近 7 条记录不足时 7 日均重为 `null`，刚好/超过 7 条时输出 2 位小数均值。
+  - 新增 `buildWorkoutWeekTrend`，按指定起止日期的连续 7 天窗口汇总训练次数、训练容量和已完成组最高重量；空训练输入返回空数组。
+  - `src/domain/trends/index.ts` 导出综合趋势函数和类型，供后续 `/trends` 页面消费。
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/domain/trends/overviewTrends.test.ts` 先因 `./overviewTrends` 不存在失败。
+  - GREEN：同命令通过，1 个测试文件、4 条测试通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `git diff --check` 通过。
+- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-15-integrated-trends-domain-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。
 - **执行指令**：
   1. 写 RED 测试：体重不足 7 条、刚好 7 条、乱序输入、训练周汇总、空输入和不变异。
   2. 运行 RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/domain/trends/overviewTrends.test.ts`。
