@@ -2,15 +2,15 @@
 
 ## 执行元数据
 
-- **Status**：confirmed
+- **Status**：executed
 - **Workflow Stage**：plan
 - **Created**：2026-07-14
 - **Updated**：2026-07-15
-- **Source Of Truth Until**：任务 7「营养趋势」完成 code、review、提交、推送，并把证据折回 `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`
+- **Source Of Truth Until**：任务 7「营养趋势」完成 code、review、提交、推送，并把证据折回 `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`（已完成）
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的“趋势”与“营养目标”需求、`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md` 任务 7、用户已批准的持续开发目标
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：Task 1–3 已完成并通过聚焦验证、typecheck、lint、diff check；下一步执行 Task 4：移动端 E2E、主计划证据回写、最终审阅、提交推送。真实 CloudBase smoke 仍需用户提供生产/测试环境配置后单独验证，不在本地 test-platform E2E 中伪报通过。
+- **Resume Point**：任务 7「营养趋势」已完成 Task 1–4：目标历史合约/领域函数、生产迁移/RPC 与平台端口、`/nutrition-trends` UI/App 路由、移动端 E2E、最终审阅、保护性提交和 GitHub 推送均已完成或进入本次提交。下一步回到主计划任务 8「综合趋势」。真实 CloudBase smoke 仍需用户提供生产/测试环境配置后单独验证，不在本地 test-platform E2E 中伪报通过。
 
 ## 模块边界
 
@@ -309,6 +309,25 @@ graph TD
   - Modify `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`
   - Modify `docs/anvil/plans/2026-07-14-nutrition-trends-plan.md`
   - Add `.ai/anvil/reviews/2026-07-14-nutrition-trends-final-review.md`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `tests/e2e/nutrition-trends.spec.ts`
+  - `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`
+  - `docs/anvil/plans/2026-07-14-nutrition-trends-plan.md`
+  - `.ai/anvil/reviews/2026-07-15-nutrition-trends-final-review.md`
+- **Accepted Change Baseline**：
+  - 新增 mobile-chromium E2E，使用 test platform 登录、保存可识别增肌目标、录入当日餐食、进入 `/nutrition-trends` 检查日趋势、周汇总和 28 天切换。
+  - 主计划和本详细计划均回写任务 7 的执行状态、验证证据、真实 CloudBase blocker 和下一步 resume point。
+  - 最终审阅确认无 Critical/High，且未创建第二任务状态系统。
+- **Verification**：
+  - Focused E2E：`pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line tests/e2e/nutrition-trends.spec.ts` 通过，1 passed。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm test` 通过，41 个测试文件、402 条测试通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm build` 通过，PWA production build 完成；Vite 仍提示 CloudBase chunk > 500 kB（既有 warning，非失败）。
+  - 全量 E2E：`pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line` 通过，6 passed / 1 real CloudBase manual skipped。
+  - `git diff --check` 通过。
+- **Evidence**：最终评审 `.ai/anvil/reviews/2026-07-15-nutrition-trends-final-review.md`，结论 `APPROVED`；真实 CloudBase manual spec 跳过原因仍为隔离环境/真实认证配置缺失，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置后运行 manual spec。
 - **执行指令**：
   1. 写失败 E2E，使用 test platform route，不依赖真实 CloudBase 或生产密钥。
   2. 运行 RED：`pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line tests/e2e/nutrition-trends.spec.ts`。

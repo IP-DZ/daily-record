@@ -5,12 +5,12 @@
 - **Status**：active
 - **Workflow Stage**：plan
 - **Created**：2026-07-13
-- **Updated**：2026-07-14
+- **Updated**：2026-07-15
 - **Source Of Truth Until**：本计划被执行完毕、被新版计划取代或被明确放弃
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`（用户已于 2026-07-13 确认）
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
-- **Resume Point**：任务 4「体重记录与热量反馈」、任务 5「训练记录、复制与容量」和任务 6「图片分析、人工确认与失败恢复」均已完成本地自动化、移动端 E2E、Anvil 审阅、状态回写、保护性提交和 GitHub 推送。任务 6 的细化执行来源为 `docs/anvil/plans/2026-07-14-photo-meal-analysis-plan.md`，已交付图片预处理、AI 分析合约/端口、生产 RLS/RPC、云函数纯处理器、`/photo-meal` 鉴权 UI 和照片记餐确认入账 E2E。最新证据：ESLint、typecheck、36 files / 378 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 5 passed / 1 real CloudBase manual skipped；GitHub 分支 `feature/cloudbase-auth` 已推送到 `aa28fcfd`。真实 CloudBase smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境、服务端模型变量和测试图片策略后运行 manual spec。当前下一业务切片为任务 7「营养趋势」，执行来源为 `docs/anvil/plans/2026-07-14-nutrition-trends-plan.md`；下一步执行该计划 Task 1（目标历史合约与趋势领域函数）。
+- **Resume Point**：任务 4「体重记录与热量反馈」、任务 5「训练记录、复制与容量」、任务 6「图片分析、人工确认与失败恢复」和任务 7「营养趋势」均已完成本地自动化、移动端 E2E、Anvil 审阅、状态回写、保护性提交和 GitHub 推送。任务 7 的细化执行来源为 `docs/anvil/plans/2026-07-14-nutrition-trends-plan.md`，已交付目标历史合约/领域函数、生产迁移/RPC 与平台端口、`/nutrition-trends` 鉴权 UI、7/28 天日趋势和周汇总、移动端营养趋势 E2E。最新证据：ESLint、typecheck、41 files / 402 Vitest tests、production build、`git diff --check` 全部通过；`mobile-chromium` E2E 6 passed / 1 real CloudBase manual skipped；GitHub 分支 `feature/cloudbase-auth` 已推送到 `b2bbe480`，本轮 Task 4 证据提交将继续推送。真实 CloudBase smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境、服务端模型变量和测试图片策略后运行 manual spec。当前下一业务切片为任务 8「综合趋势」。
 
 ## 交付拆分
 
@@ -371,7 +371,7 @@ graph TD
 - **执行指令**：模型测试使用固定夹具；真实模型仅做受控 smoke，不进入常规测试。
 
 ### 任务 7：营养趋势
-- **Code Status**：active（细化计划已创建：`docs/anvil/plans/2026-07-14-nutrition-trends-plan.md`；下一步执行 Task 1）
+- **Code Status**：done（细化计划 `2026-07-14-nutrition-trends-plan.md` Task 1–4 已完成并通过最终审阅；真实 CloudBase smoke 仍随任务 2 blocker 保持 blocked）
 - **Planning Note**：主计划原先写“只读取已稳定餐次接口”，但成功标准要求跨目标版本按日期取正确目标；细化计划补入目标历史读模型、迁移/RPC 和平台端口作为串行前置。
 - **Layer**：4
 - **Parallel Group**：G4B
@@ -382,6 +382,8 @@ graph TD
 - **Write Set**：同 Ownership
 - **描述**：按日/周展示热量和三大营养素完成情况。
 - **成功标准**：跨目标版本时按日期取正确目标；空数据、部分周和完整周测试通过。
+- **Verification**：contracts/domain focused tests、platform/RPC/security focused tests、NutritionTrends/App component tests、focused nutrition trends mobile E2E、全量 `pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、全量 `pnpm test:e2e --project=mobile-chromium --reporter=line`、`git diff --check`
+- **Evidence**：Task 1 contracts/domain：2 files / 12 tests passed，typecheck/lint/diff check passed，审阅见 `.ai/anvil/reviews/2026-07-14-nutrition-trends-domain-review.md`；Task 2 platform/RPC/security：5 files / 22 tests passed，typecheck/lint/diff check passed，审阅见 `.ai/anvil/reviews/2026-07-14-nutrition-trends-platform-review.md`；Task 3 UI/App route：2 files / 22 tests passed，typecheck/lint/diff check passed，审阅见 `.ai/anvil/reviews/2026-07-15-nutrition-trends-ui-review.md`；Task 4 mobile E2E/final：focused `nutrition-trends.spec.ts` 1 passed，全量 lint/typecheck/unit/build 通过，41 files / 402 Vitest tests passed，全量 `mobile-chromium` E2E 6 passed / 1 real CloudBase manual skipped，最终审阅 `.ai/anvil/reviews/2026-07-15-nutrition-trends-final-review.md` 批准。真实 CloudBase manual smoke 未声明通过，blocker owner=仓库所有者，next=配置隔离 CloudBase 环境、服务端模型变量和测试图片策略后运行 manual spec。
 - **预估 Token**：100k
 - **依赖**：任务 3
 - **涉及文件**：营养趋势 feature 和纯聚合测试。
@@ -443,11 +445,11 @@ graph TD
 
 | 门禁 | Code Status | 证据 |
 |---|---|---|
-| 自动化测试 | passed | 378 个 Vitest 测试；2026-07-14 最新 `mobile-chromium` 5 passed / 1 个真实环境 manual skipped |
+| 自动化测试 | passed | 402 个 Vitest 测试；2026-07-15 最新 `mobile-chromium` 6 passed / 1 个真实环境 manual skipped |
 | 类型与静态检查 | passed | 全仓 ESLint、`tsc -b`、`git diff --check` 退出码 0 |
 | PWA 构建 | passed | production build 生成 Manifest、Service Worker 与 Workbox；Vite 大 chunk 警告为非阻塞，未新增 SW runtime cache |
 | 性能预算 | partial | 本轮 build 通过且未新增首屏必须加载的真实 AI SDK；图片分析与 CloudBase adapter 仍保持动态平台加载。最终大陆网络/LCP 预算归任务 9 统一验收 |
 | 敏感信息与缓存边界 | passed | 生产产物无服务端密钥值、固定测试 OTP/邮箱/端点/test-platform chunk；未新增用户 API runtime caching |
-| 任务级独立审查 | passed | 任务 2 的五个详细子任务、任务 3 的 Task 1–4、体重/训练 Task 1–6、图片分析 Task 1–6 最终均无未解决 Critical/Important |
-| 整分支 Anvil 评审 | passed | 任务 2 整分支评审已批准；任务 3 最终审阅 `.ai/anvil/reviews/2026-07-14-manual-meals-final-review.md` 批准；体重页/训练页/图片分析最终审阅均批准，无未解决 Critical/Important |
-| 后续业务任务 | partial | 任务 2 与任务 6 真实 CloudBase/视觉模型 smoke blocked；任务 4/5/6 已完成本地自动化与移动 E2E 证据，下一业务切片建议为任务 7 营养趋势 |
+| 任务级独立审查 | passed | 任务 2 的五个详细子任务、任务 3 的 Task 1–4、体重/训练 Task 1–6、图片分析 Task 1–6、营养趋势 Task 1–4 最终均无未解决 Critical/Important |
+| 整分支 Anvil 评审 | passed | 任务 2 整分支评审已批准；任务 3 最终审阅 `.ai/anvil/reviews/2026-07-14-manual-meals-final-review.md` 批准；体重页/训练页/图片分析/营养趋势最终审阅均批准，无未解决 Critical/Important |
+| 后续业务任务 | partial | 任务 2 与任务 6/7 真实 CloudBase/视觉模型 smoke blocked；任务 4/5/6/7 已完成本地自动化与移动 E2E 证据，下一业务切片建议为任务 8 综合趋势 |
