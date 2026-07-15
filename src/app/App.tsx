@@ -4,10 +4,12 @@ import { AuthGate } from '../features/auth';
 import { OnboardingPage } from '../features/onboarding';
 import { TodayPage } from '../features/today';
 import { PhotoMealPage } from '../features/photo-meal';
+import { NutritionTrendsPage } from '../features/nutrition-trends';
 import { WeightPage } from '../features/weight';
 import { WorkoutsPage } from '../features/workouts';
 import type { AuthPort } from '../platform/auth';
 import type { MealsRepository } from '../platform/meals';
+import type { NutritionGoalsRepository } from '../platform/nutritionGoals';
 import type { PhotoMealAnalysisRepository } from '../platform/photoMeal';
 import type { ProfileSettingsRepository } from '../platform/settings/ProfileSettingsRepository';
 import type { WeightRepository } from '../platform/weight';
@@ -49,6 +51,7 @@ interface AppProps {
   auth?: AuthPort;
   profileSettings?: ProfileSettingsRepository;
   meals?: MealsRepository;
+  nutritionGoals?: NutritionGoalsRepository;
   photoMeals?: PhotoMealAnalysisRepository;
   weight?: WeightRepository;
   workouts?: WorkoutsRepository;
@@ -60,6 +63,7 @@ type Platform = {
   auth: AuthPort;
   profileSettings: ProfileSettingsRepository;
   meals: MealsRepository;
+  nutritionGoals: NutritionGoalsRepository;
   photoMeals: PhotoMealAnalysisRepository;
   weight: WeightRepository;
   workouts: WorkoutsRepository;
@@ -80,6 +84,7 @@ export function App({
   auth: injectedAuth,
   profileSettings: injectedProfileSettings,
   meals: injectedMeals,
+  nutritionGoals: injectedNutritionGoals,
   photoMeals: injectedPhotoMeals,
   weight: injectedWeight,
   workouts: injectedWorkouts,
@@ -140,6 +145,7 @@ export function App({
     auth: AuthPort | null;
     profileSettings: ProfileSettingsRepository | null;
     meals: MealsRepository | null;
+    nutritionGoals: NutritionGoalsRepository | null;
     photoMeals: PhotoMealAnalysisRepository | null;
     weight: WeightRepository | null;
     workouts: WorkoutsRepository | null;
@@ -149,6 +155,7 @@ export function App({
     auth: null,
     profileSettings: null,
     meals: null,
+    nutritionGoals: null,
     photoMeals: null,
     weight: null,
     workouts: null,
@@ -165,6 +172,7 @@ export function App({
       auth: null,
       profileSettings: null,
       meals: null,
+      nutritionGoals: null,
       photoMeals: null,
       weight: null,
       workouts: null,
@@ -177,6 +185,7 @@ export function App({
           auth: platform.auth,
           profileSettings: platform.profileSettings,
           meals: platform.meals,
+          nutritionGoals: platform.nutritionGoals,
           photoMeals: platform.photoMeals,
           weight: platform.weight,
           workouts: platform.workouts,
@@ -189,6 +198,7 @@ export function App({
           auth: null,
           profileSettings: null,
           meals: null,
+          nutritionGoals: null,
           photoMeals: null,
           weight: null,
           workouts: null,
@@ -207,6 +217,7 @@ export function App({
       auth: null,
       profileSettings: null,
       meals: null,
+      nutritionGoals: null,
       photoMeals: null,
       weight: null,
       workouts: null,
@@ -214,6 +225,7 @@ export function App({
   const auth = injectedAuth ?? currentPlatformState.auth;
   const profileSettings = injectedProfileSettings ?? currentPlatformState.profileSettings;
   const meals = injectedMeals ?? currentPlatformState.meals;
+  const nutritionGoals = injectedNutritionGoals ?? currentPlatformState.nutritionGoals;
   const photoMeals = injectedPhotoMeals ?? currentPlatformState.photoMeals;
   const weight = injectedWeight ?? currentPlatformState.weight;
   const workouts = injectedWorkouts ?? currentPlatformState.workouts;
@@ -333,6 +345,24 @@ export function App({
       训练记录需要登录后使用；请先配置 CloudBase 或打开测试平台。
     </main>
   );
+  const nutritionTrendsPage = auth !== null && meals !== null && nutritionGoals !== null ? (
+    <AuthGate auth={auth}>
+      <NutritionTrendsPage meals={meals} nutritionGoals={nutritionGoals} />
+    </AuthGate>
+  ) : publicConfig !== null && currentPlatformState.status === 'error' ? (
+    <main className="auth-loading">
+      <p role="alert">认证服务加载失败，请稍后重试。</p>
+      <button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>
+        重新连接
+      </button>
+    </main>
+  ) : publicConfig !== null ? (
+    <main className="auth-loading" role="status">正在连接认证服务…</main>
+  ) : (
+    <main className="auth-loading" role="alert">
+      营养趋势需要登录后使用；请先配置 CloudBase 或打开测试平台。
+    </main>
+  );
 
   return (
     <>
@@ -346,6 +376,7 @@ export function App({
         <Route path="/onboarding" element={onboardingPage} />
         <Route path="/today" element={todayPage} />
         <Route path="/photo-meal" element={photoMealPage} />
+        <Route path="/nutrition-trends" element={nutritionTrendsPage} />
         <Route path="/weight" element={weightPage} />
         <Route path="/workouts" element={workoutsPage} />
         <Route path="*" element={<WelcomePage />} />

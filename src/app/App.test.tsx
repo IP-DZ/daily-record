@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthPort } from '../platform/auth';
 import type { MealsRepository } from '../platform/meals';
+import type { NutritionGoalsRepository } from '../platform/nutritionGoals';
 import type { PhotoMealAnalysisRepository } from '../platform/photoMeal';
 import type { ProfileSettingsRepository } from '../platform/settings/ProfileSettingsRepository';
 import type { WeightRepository } from '../platform/weight';
@@ -53,6 +54,24 @@ function createMealsRepository(meals: MealEntry[] = []): MealsRepository {
     delete: vi.fn(),
     copy: vi.fn(),
   } as MealsRepository;
+}
+
+function createNutritionGoalsRepository(): NutritionGoalsRepository {
+  return {
+    listByDateRange: vi.fn().mockResolvedValue([{
+      version: 1,
+      effectiveDate: '2026-07-01',
+      targets: {
+        restingKcal: 1700,
+        maintenanceKcal: 2600,
+        caloriesKcal: 2860,
+        proteinGrams: 140,
+        fatGrams: 79,
+        carbsGrams: 390,
+      },
+      createdAt: '2026-07-01T08:00:00.000Z',
+    }]),
+  };
 }
 
 function createWeightRepository(entries: WeightEntry[] = []): WeightRepository {
@@ -317,6 +336,43 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: '拍照记录饮食' })).toBeInTheDocument();
     expect(screen.getByText('照片会发送给第三方视觉模型处理')).toBeInTheDocument();
+  });
+
+  it('keeps the nutrition trends route behind the authenticated session', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn().mockResolvedValue(undefined),
+      verifyEmailCode: vi.fn().mockResolvedValue({ userId: 'user-1' }),
+      currentUser: vi.fn().mockResolvedValue(null),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+
+    render(
+      <MemoryRouter initialEntries={['/nutrition-trends']}>
+        <App auth={auth} meals={createMealsRepository()} nutritionGoals={createNutritionGoalsRepository()} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '注册或登录' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '营养趋势' })).not.toBeInTheDocument();
+  });
+
+  it('renders the nutrition trends page after auth restores', async () => {
+    const auth: AuthPort = {
+      requestEmailCode: vi.fn(),
+      verifyEmailCode: vi.fn(),
+      currentUser: vi.fn().mockResolvedValue({ userId: 'user-trends' }),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    } as AuthPort;
+    const nutritionGoals = createNutritionGoalsRepository();
+
+    render(
+      <MemoryRouter initialEntries={['/nutrition-trends']}>
+        <App auth={auth} meals={createMealsRepository()} nutritionGoals={nutritionGoals} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '营养趋势' })).toBeInTheDocument();
+    expect(nutritionGoals.listByDateRange).toHaveBeenCalled();
   });
 
   it('shows a recoverable notice when browser storage is unavailable', async () => {

@@ -5,12 +5,12 @@
 - **Status**：confirmed
 - **Workflow Stage**：plan
 - **Created**：2026-07-14
-- **Updated**：2026-07-14
+- **Updated**：2026-07-15
 - **Source Of Truth Until**：任务 7「营养趋势」完成 code、review、提交、推送，并把证据折回 `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的“趋势”与“营养目标”需求、`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md` 任务 7、用户已批准的持续开发目标
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：本计划已补齐任务 7 的可执行 DAG。下一步执行 Task 1：目标历史合约与纯趋势领域函数。注意：主计划原先把任务 7 描述为只读餐次接口，但成功标准要求“跨目标版本时按日期取正确目标”；当前代码只有当前 profile target，没有按日期读取目标历史的端口，因此本计划新增目标历史读模型作为串行前置，不改变用户需求，只补齐可验证实现路径。
+- **Resume Point**：Task 1–3 已完成并通过聚焦验证、typecheck、lint、diff check；下一步执行 Task 4：移动端 E2E、主计划证据回写、最终审阅、提交推送。真实 CloudBase smoke 仍需用户提供生产/测试环境配置后单独验证，不在本地 test-platform E2E 中伪报通过。
 
 ## 模块边界
 
@@ -265,6 +265,26 @@ graph TD
   - Create `src/features/nutrition-trends/index.ts`
   - Modify `src/app/App.tsx`
   - Modify `src/app/App.test.tsx`
+- **Code Status**：done
+- **Actual Write Set**：
+  - `src/features/nutrition-trends/NutritionTrendsPage.test.tsx`
+  - `src/features/nutrition-trends/NutritionTrendsPage.tsx`
+  - `src/features/nutrition-trends/nutritionTrends.css`
+  - `src/features/nutrition-trends/index.ts`
+  - `src/app/App.tsx`
+  - `src/app/App.test.tsx`
+- **Accepted Change Baseline**：
+  - 新增 `/nutrition-trends` 鉴权页面，默认以本地日期为结束日，支持回看近 7 天/28 天。
+  - 页面通过 `MealsRepository` 和 `NutritionGoalsRepository` 读取每日摄入和目标历史，复用领域函数生成日趋势与周汇总，不在 UI 中直接读取 CloudBase 表或传 `userId`。
+  - 页面以可访问表格和轻量 CSS 进度条展示热量目标完成率；无目标时显示“暂无目标”和“—”，不伪造 0%；文案明确“目标和摄入均为估算，不构成医疗建议。”。
+  - App 平台 shape 接入 `nutritionGoals`，`/nutrition-trends` 在未登录时显示登录页，CloudBase 缺配置/加载失败时失败关闭并提供既有可恢复路径。
+- **Verification**：
+  - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/features/nutrition-trends/NutritionTrendsPage.test.tsx src/app/App.test.tsx` 先因 `NutritionTrendsPage` 和 `/nutrition-trends` route 不存在失败。
+  - GREEN：同命令通过，2 个测试文件、22 条测试通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `git diff --check` 通过。
+- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-15-nutrition-trends-ui-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。
 - **执行指令**：
   1. 写失败组件测试：无目标、空餐食、单日/多日摄入、目标版本切换、加载失败重试、路由鉴权。
   2. 运行 RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/features/nutrition-trends/NutritionTrendsPage.test.tsx src/app/App.test.tsx`。
