@@ -10,7 +10,7 @@
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的隐私、离线、PWA、部署与验收需求、主计划任务 9、用户已批准的持续开发目标
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：Task 1「离线草稿与恢复确认」、Task 2「隐私设置与清空应用数据」、Task 3「PWA/部署运维加固」和 Task 4「系统 E2E、状态更新与最终审阅」已完成本地实现、RED/GREEN 验证、全量单测、lint、typecheck、production build、构建产物扫描、全量 mobile E2E 和 diff check。真实 CloudBase、真实视觉模型和大陆网络 smoke 仍需要仓库所有者提供隔离环境后执行；本计划保留 blocker 和可操作 next step，不伪报通过。
+- **Resume Point**：Task 1「离线草稿与恢复确认」、Task 2「隐私设置与清空应用数据」、Task 3「PWA/部署运维加固」和 Task 4「系统 E2E、状态更新与最终审阅」已完成本地实现、RED/GREEN 验证、全量单测、lint、typecheck、production build、构建产物扫描、全量 mobile E2E 和 diff check；README 交付入口已在 `78c79981 docs: update project handoff readme` 更新并推送。真实 CloudBase、真实视觉模型和大陆网络 smoke 仍需要仓库所有者提供隔离环境后执行；本计划保留 blocker 和可操作 next step，不伪报通过。
 
 ## 模块边界
 
