@@ -122,6 +122,7 @@ describe('deployment and build artifact safety', () => {
 
   it('keeps GitHub CI aligned with the local release gates that can run without real CloudBase secrets', () => {
     const ciWorkflow = readProjectFile('.github/workflows/ci.yml');
+    const rootPackage = readJsonProjectFile<{ devDependencies?: Record<string, unknown> }>('package.json');
 
     for (const requiredTerm of [
       'pnpm/action-setup',
@@ -145,6 +146,9 @@ describe('deployment and build artifact safety', () => {
     expect(ciWorkflow).toContain('pull_request');
     expect(ciWorkflow).not.toContain('preflight:cloudbase-manual');
     expect(ciWorkflow).not.toContain('PHOTO_MEAL_MODEL_API_KEY');
+    expect(rootPackage.devDependencies).toEqual(expect.objectContaining({
+      '@types/node': expect.any(String),
+    }));
   });
 
   it('keeps the meal photo cloud function as a buildable deployment package', () => {
