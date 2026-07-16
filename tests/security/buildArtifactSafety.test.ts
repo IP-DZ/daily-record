@@ -114,6 +114,7 @@ describe('deployment and build artifact safety', () => {
       'CloudBase 环境 ID',
       '公网 IP',
       'validate:manual-smoke-result',
+      '--release-ready',
     ]) {
       expect(manualSmokeTemplate).toContain(requiredTerm);
     }
