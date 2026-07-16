@@ -8,6 +8,7 @@
 pnpm install
 pnpm lint
 pnpm typecheck
+pnpm test:cloud-functions
 pnpm typecheck:cloud-functions
 pnpm test
 pnpm build

@@ -105,6 +105,7 @@ describe('deployment and build artifact safety', () => {
 
     expect(workspace).toContain('cloud/functions/*');
     expect(rootPackage.scripts).toEqual(expect.objectContaining({
+      'test:cloud-functions': 'pnpm --filter meal-photo-analysis test',
       'typecheck:cloud-functions': 'pnpm --filter meal-photo-analysis typecheck',
       'build:cloud-functions': 'pnpm --filter meal-photo-analysis build',
       'smoke:cloud-functions': 'pnpm --filter meal-photo-analysis smoke',
@@ -129,6 +130,7 @@ describe('deployment and build artifact safety', () => {
     expect(tsconfig.include).toEqual(['src/**/*.ts']);
     expect(readProjectFile('cloud/functions/meal-photo-analysis/vite.config.ts')).toContain('src/index.ts');
     expect(readProjectFile('cloud/functions/meal-photo-analysis/src/index.ts')).toContain('export async function main');
+    expect(readProjectFile('docs/operations/deployment.md')).toContain('pnpm test:cloud-functions');
     expect(readProjectFile('docs/operations/deployment.md')).toContain('pnpm smoke:cloud-functions');
   });
 
