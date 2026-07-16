@@ -64,6 +64,9 @@ jobs:
       - name: Validate CloudBase RPC docs
         run: pnpm validate:cloudbase-rpc-docs
 
+      - name: Validate CloudBase environment docs
+        run: pnpm validate:cloudbase-env-docs
+
       - name: Scan production build artifacts
         run: pnpm vitest run tests/security/buildArtifactSafety.test.ts
 

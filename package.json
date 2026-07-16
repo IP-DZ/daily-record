@@ -18,6 +18,7 @@
     "preflight:cloudbase-manual": "node scripts/cloudbase-manual-preflight.mjs",
     "validate:manual-smoke-result": "node scripts/validate-manual-smoke-result.mjs",
     "validate:cloudbase-rpc-docs": "node scripts/validate-cloudbase-rpc-docs.mjs",
+    "validate:cloudbase-env-docs": "node scripts/validate-cloudbase-env-docs.mjs",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
