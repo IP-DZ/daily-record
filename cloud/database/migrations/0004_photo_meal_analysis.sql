@@ -436,10 +436,41 @@ BEGIN
 END;
 $$;
 
+CREATE FUNCTION public.count_my_photo_meal_analyses_by_date(analysis_date text)
+RETURNS integer
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, auth
+AS $$
+DECLARE
+  current_user_id text := auth.uid();
+  analysis_count integer;
+BEGIN
+  IF current_user_id IS NULL OR btrim(current_user_id) = '' THEN
+    RAISE EXCEPTION 'authenticated user is required' USING ERRCODE = '28000';
+  END IF;
+
+  IF analysis_date !~ '^\d{4}-\d{2}-\d{2}$' THEN
+    RAISE EXCEPTION 'invalid photo meal analysis date' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT count(*)::integer
+  INTO analysis_count
+  FROM public.ai_analyses
+  WHERE user_id = current_user_id
+    AND meal_date = analysis_date::date;
+
+  RETURN analysis_count;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.count_my_photo_meal_analyses_by_date(text) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.create_my_photo_meal_analysis(jsonb) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.get_my_photo_meal_analysis(uuid) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.confirm_my_photo_meal_analysis(uuid, text, jsonb) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.discard_my_photo_meal_analysis(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.count_my_photo_meal_analyses_by_date(text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_my_photo_meal_analysis(jsonb) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_photo_meal_analysis(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.confirm_my_photo_meal_analysis(uuid, text, jsonb) TO authenticated;

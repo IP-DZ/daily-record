@@ -11,7 +11,7 @@
 - 主计划：[`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`](docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md)
 - 系统加固计划：[`docs/anvil/plans/2026-07-15-system-hardening-deployment-plan.md`](docs/anvil/plans/2026-07-15-system-hardening-deployment-plan.md)
 
-真实 CloudBase、真实视觉模型和中国大陆网络 smoke 仍需要仓库所有者提供隔离环境、模型配置、测试邮箱和实际网络设备后执行；本仓库不会用本地 test platform 伪报真实云环境通过。
+真实 CloudBase、真实视觉模型和中国大陆网络 smoke 仍需要仓库所有者提供隔离环境、云函数服务端模型 secret、测试邮箱和实际网络设备后执行；本仓库不会用本地 test platform 伪报真实云环境通过。
 
 ## 已实现能力
 
@@ -48,13 +48,13 @@ pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArti
 pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line
 ```
 
-最近证据已写回 Anvil 计划：48 个 Vitest 文件通过（431 passed / 1 skipped），production build 通过，构建产物安全扫描 4/4，通过移动端 E2E 8 passed / 1 real CloudBase manual skipped。
+最近证据已写回 Anvil 计划：49 个 Vitest 文件通过（438 passed），production build 通过，构建产物安全扫描 4/4，通过移动端 E2E 8 passed / 1 real CloudBase manual skipped。
 
 ## 技术栈
 
 - React + TypeScript + Vite PWA
 - 腾讯云 CloudBase：静态托管、邮箱认证、PostgreSQL、云函数和私有存储
-- CloudBase 国内多模态模型/云函数处理图片餐食估算，业务层保留模型供应商适配接口
+- CloudBase 云函数处理图片餐食估算，服务端已提供 `http-json` / OpenAI-compatible 视觉模型 provider 适配接口
 
 ## 部署与真实 smoke
 
@@ -62,7 +62,7 @@ pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium 
 - CloudBase 隔离测试环境：[`docs/operations/cloudbase-test-environment.md`](docs/operations/cloudbase-test-environment.md)
 - 环境变量样例：`.env.example`
 
-真实 smoke 必须在隔离 CloudBase 环境、真实测试邮箱、服务端模型配置和中国大陆网络设备准备后执行。执行摘要不得记录真实邮箱、验证码、session、token、照片对象 key 或模型响应原文。
+真实 smoke 必须在隔离 CloudBase 环境、真实测试邮箱、服务端 `PHOTO_MEAL_*` 模型配置和中国大陆网络设备准备后执行。执行摘要不得记录真实邮箱、验证码、session、token、照片对象 key 或模型响应原文。
 
 ## 安全原则
 

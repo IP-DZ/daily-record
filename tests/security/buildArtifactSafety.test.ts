@@ -37,6 +37,11 @@ describe('deployment and build artifact safety', () => {
     expect(deployment).toContain('中国大陆网络 smoke');
     expect(deployment).toContain('LCP 预算');
     expect(deployment).toContain('包体预算');
+    expect(deployment).toContain('PHOTO_MEAL_MODEL_PROVIDER');
+    expect(deployment).toContain('PHOTO_MEAL_MODEL_ENDPOINT');
+    expect(deployment).toContain('PHOTO_MEAL_MODEL_NAME');
+    expect(deployment).toContain('PHOTO_MEAL_DAILY_LIMIT');
+    expect(deployment).toContain('PHOTO_MEAL_MODEL_API_KEY');
     expect(deployment).toContain('真实 blocker');
     expect(deployment).toContain('cloudbase-test-environment.md');
     expect(deployment).toContain('local-development.md');

@@ -75,6 +75,15 @@ async function discardAnalysis(client: SqlClient, id: string): Promise<Record<st
   ).rows[0].analysis;
 }
 
+async function countMyAnalysesByDate(client: SqlClient, date: string): Promise<number> {
+  return (
+    await client.query<{ count: number }>(
+      'SELECT public.count_my_photo_meal_analyses_by_date($1::text)::int AS count',
+      [date],
+    )
+  ).rows[0].count;
+}
+
 async function countRows(client: SqlClient, table: 'ai_analyses' | 'meals'): Promise<number> {
   return (await client.query<{ count: number }>(`SELECT count(*)::int AS count FROM public.${table}`)).rows[0].count;
 }
@@ -136,6 +145,27 @@ describe('photo meal analysis RPC security boundary', () => {
     expect(repeated.id).toBe(first.id);
     expect(bAnalysis.id).not.toBe(first.id);
     expect(await asRole(db, 'service_role', (client) => countRows(client, 'ai_analyses'))).toBe(2);
+  });
+
+  it('counts only the authenticated user analyses for the requested date', async () => {
+    await asUser(db, 'user-a', (client) => createAnalysis(client));
+    await asUser(db, 'user-a', (client) => createAnalysis(client, {
+      ...validCreatePayload,
+      requestId: 'request-2',
+      mealDate: '2026-07-15',
+      imageObjectKey: 'users/user-a/photo-meal/request-2/photo.webp',
+    }));
+    await asUser(db, 'user-b', (client) => createAnalysis(client, {
+      ...validCreatePayload,
+      imageObjectKey: 'users/user-b/photo-meal/request-1/photo.webp',
+    }));
+
+    await expect(asUser(db, 'user-a', (client) => countMyAnalysesByDate(client, '2026-07-14'))).resolves.toBe(1);
+    await expect(asUser(db, 'user-a', (client) => countMyAnalysesByDate(client, '2026-07-15'))).resolves.toBe(1);
+    await expect(asUser(db, 'user-b', (client) => countMyAnalysesByDate(client, '2026-07-14'))).resolves.toBe(1);
+    await expect(asUser(db, 'user-a', (client) => countMyAnalysesByDate(client, 'bad-date'))).rejects.toThrow(
+      /invalid photo meal analysis date/i,
+    );
   });
 
   it('denies direct access and foreign mutations without partial writes', async () => {

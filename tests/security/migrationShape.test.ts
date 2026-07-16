@@ -161,6 +161,7 @@ describe('production migration security shape', () => {
           'update_my_workout',
           'delete_my_workout',
           'copy_my_latest_workout',
+          'count_my_photo_meal_analyses_by_date',
           'create_my_photo_meal_analysis',
           'get_my_photo_meal_analysis',
           'confirm_my_photo_meal_analysis',
@@ -170,7 +171,7 @@ describe('production migration security shape', () => {
         )
       ORDER BY p.proname
     `);
-    expect(functions.rows).toHaveLength(22);
+    expect(functions.rows).toHaveLength(23);
     for (const fn of functions.rows) {
       expect(fn.prosecdef).toBe(true);
       expect(fn.proconfig).toContain('search_path=pg_catalog, public, auth');
@@ -214,6 +215,9 @@ describe('production migration security shape', () => {
     expect(functions.rows.find(({ proname }) => proname === 'copy_my_latest_workout')?.arguments).toBe(
       'target_workout_date text',
     );
+    expect(functions.rows.find(({ proname }) => proname === 'count_my_photo_meal_analyses_by_date')?.arguments).toBe(
+      'analysis_date text',
+    );
     expect(functions.rows.find(({ proname }) => proname === 'create_my_photo_meal_analysis')?.arguments).toBe(
       'payload jsonb',
     );
@@ -249,6 +253,7 @@ describe('production migration security shape', () => {
           'update_my_workout',
           'delete_my_workout',
           'copy_my_latest_workout',
+          'count_my_photo_meal_analyses_by_date',
           'create_my_photo_meal_analysis',
           'get_my_photo_meal_analysis',
           'confirm_my_photo_meal_analysis',
@@ -263,6 +268,7 @@ describe('production migration security shape', () => {
       { grantee: 'authenticated', routine_name: 'confirm_my_photo_meal_analysis' },
       { grantee: 'authenticated', routine_name: 'copy_my_latest_workout' },
       { grantee: 'authenticated', routine_name: 'copy_my_meal' },
+      { grantee: 'authenticated', routine_name: 'count_my_photo_meal_analyses_by_date' },
       { grantee: 'authenticated', routine_name: 'create_my_meal' },
       { grantee: 'authenticated', routine_name: 'create_my_photo_meal_analysis' },
       { grantee: 'authenticated', routine_name: 'create_my_weight_entry' },

@@ -24,6 +24,24 @@ pnpm test:e2e --project=mobile-chromium --reporter=line
 4. 将 `dist/` 上传到 CloudBase 静态托管，入口回退到 `/index.html`，但不要把 `/api/*` 或 `/__*` endpoint 配成静态缓存。
 5. 发布后使用无登录缓存的移动浏览器访问根路径、`/onboarding`、`/today`、`/settings`，确认 PWA 可安装、更新提示可见、账号接口正常走 CloudBase。
 
+## CloudBase 云函数与模型变量
+
+`cloud/functions/meal-photo-analysis` 提供可部署入口和可注入 runtime factory。部署 `mealPhotoAnalysis` 云函数时，必须在 CloudBase 服务端环境或函数级 secret 中配置以下变量；这些变量不得写入 `.env.example`、浏览器代码、构建日志、Playwright trace、截图或提交历史。
+
+```bash
+PHOTO_MEAL_MODEL_PROVIDER=http-json
+PHOTO_MEAL_MODEL_ENDPOINT=<server-side-vision-model-endpoint>
+PHOTO_MEAL_MODEL_NAME=<vision-model-name>
+PHOTO_MEAL_MODEL_API_KEY=<server-side-secret>
+PHOTO_MEAL_DAILY_LIMIT=20
+```
+
+- `PHOTO_MEAL_MODEL_PROVIDER` 首版仅支持 `http-json`，使用 OpenAI-compatible JSON chat/vision 请求体：`messages`、`image_url`、`response_format: { type: "json_object" }`。
+- `PHOTO_MEAL_MODEL_ENDPOINT` 必须是服务端可访问的 HTTPS 地址；大陆网络首发应优先选择大陆可访问、延迟稳定的模型服务。
+- `PHOTO_MEAL_MODEL_API_KEY` 只允许存在于云函数环境；仓库和前端构建产物只保存变量名，不保存值。
+- `PHOTO_MEAL_DAILY_LIMIT` 默认 20，合法范围 1–100；真实环境调高前应先确认模型成本和限流策略。
+- 云函数存储适配器必须把图片保存到 `users/{userHash}/photo-meal/{requestHash}/photo.webp|jpg` 形式的私有对象 key；不得使用 raw 用户 ID 作为路径段，不得生成长期公开 URL，也不得把 data URL、签名 URL、模型原文响应或密钥写入日志。
+
 ## 自托管部署
 
 1. 使用任意静态站点服务托管 `dist/`，开启 HTTPS、Brotli/gzip、长期 immutable cache 给带 hash 的 assets。
@@ -37,7 +55,7 @@ pnpm test:e2e --project=mobile-chromium --reporter=line
 
 1. 首屏打开 `/` 和 `/onboarding`，记录 4G/5G 或家庭宽带下的可交互体感。
 2. 登录测试账号，保存目标、餐食、体重、训练，再进入 `/trends` 检查聚合趋势。
-3. 打开 `/photo-meal`，上传一张测试餐食图，确认结果标记为可编辑估算，且没有暴露模型密钥或原始 provider 错误。
+3. 打开 `/photo-meal`，上传一张测试餐食图，确认结果标记为可编辑估算，且没有暴露模型密钥或原始 provider 错误；只记录 pass/fail、耗时区间和用户是否手动修改估算，不记录照片对象 key 或模型响应原文。
 4. 进入 `/settings`，只在隔离测试账号中验证“清空我的数据”，确认清空后业务数据不可读，登录身份仍可退出。
 5. 断网刷新已访问过的页面，确认只看到静态应用外壳/离线提示；不得展示过期的私有餐食照片、签名 URL 或账号 API 响应。
 
@@ -49,4 +67,4 @@ pnpm test:e2e --project=mobile-chromium --reporter=line
 
 ## 真实 blocker
 
-当前仓库无法自行完成真实 CloudBase、真实视觉模型和中国大陆网络 smoke，因为缺少隔离环境 ID、Publishable Key、服务端模型配置、两个测试邮箱和实际大陆网络设备。负责人为仓库所有者；下一步是提供隔离环境和测试账号后，按本文档与 [本地开发文档](./local-development.md) 记录不含邮箱、验证码、session、token、照片对象 key 或模型响应原文的 pass/fail 摘要。
+当前仓库已经提供本地可测的 `mealPhotoAnalysis` 云函数 handler、私有对象存储适配、auth-bound RPC 数据库网关和 `http-json` 模型 provider 适配；但仍无法自行完成真实 CloudBase、真实视觉模型和中国大陆网络 smoke，因为缺少隔离环境 ID、Publishable Key、服务端模型配置、两个测试邮箱和实际大陆网络设备。负责人为仓库所有者；下一步是提供隔离环境、云函数 secret 和测试账号后，按本文档与 [本地开发文档](./local-development.md) 记录不含邮箱、验证码、session、token、照片对象 key 或模型响应原文的 pass/fail 摘要。

@@ -5,12 +5,12 @@
 - **Status**：executed
 - **Workflow Stage**：review
 - **Created**：2026-07-14
-- **Updated**：2026-07-14
+- **Updated**：2026-07-16
 - **Source Of Truth Until**：图片餐食分析切片已完成 code/review，并已进入保护性提交路径；后续状态回到 `docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md` 的“图片识别”需求、`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md` 任务 6、用户已批准的方案 A 与大陆网络约束
 - **Compounded Knowledge**：not yet compounded
 - **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e --project=mobile-chromium --reporter=line`
-- **Resume Point**：Task 1–6 已完成代码、自动化验证与 Anvil 审阅；本切片交付了图片预处理、AI 分析合约/端口、生产 RLS/RPC、云函数纯处理器、`/photo-meal` 鉴权 UI、移动端照片记餐 E2E 和主计划状态回写，并通过保护性提交 `test: add photo meal e2e coverage` 保护。下一步回到主计划任务 7「营养趋势」，或先按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境后运行真实 CloudBase/视觉模型 manual smoke。真实 CloudBase 视觉模型 smoke 在隔离环境、服务端模型配置和测试图片策略准备前保持 blocked；本地自动化使用固定图片夹具和 test platform，不伪报真实模型通过。
+- **Resume Point**：Task 1–6 已完成代码、自动化验证与 Anvil 审阅；2026-07-16 续作补齐了 `mealPhotoAnalysis` 云函数部署入口、服务端 `http-json`/OpenAI-compatible 视觉模型 provider、私有对象存储适配、auth-bound RPC 数据库网关和按用户/日期计数 RPC，并更新部署文档中的服务端 `PHOTO_MEAL_*` 变量。对象 key 现在使用 user/request 哈希分段，避免 raw 用户 ID 暴露和路径碰撞。最新证据：ESLint passed；production build passed；49 files / 438 Vitest tests passed；build artifact safety 4/4；`mobile-chromium` E2E 8 passed / 1 real CloudBase manual skipped；`git diff --check` passed。真实 CloudBase 视觉模型 smoke 仍需隔离环境、服务端 secret、模型 endpoint、测试图片策略和大陆网络设备后执行；本地自动化使用固定图片夹具和 test platform，不伪报真实模型通过。
 
 ## 模块边界
 
@@ -365,28 +365,40 @@ graph TD
   - Create `cloud/functions/meal-photo-analysis/src/handler.ts`
   - Create `cloud/functions/meal-photo-analysis/src/handler.test.ts`
   - Create `cloud/functions/meal-photo-analysis/package.json`
+  - Create `cloud/functions/meal-photo-analysis/src/runtime.ts`
+  - Create `cloud/functions/meal-photo-analysis/src/runtime.test.ts`
+  - Create `cloud/functions/meal-photo-analysis/src/index.ts`
 - **Code Status**：done
 - **Actual Write Set**：
   - `cloud/database/migrations/0004_photo_meal_analysis.sql`
   - `cloud/functions/meal-photo-analysis/package.json`
   - `cloud/functions/meal-photo-analysis/src/handler.ts`
   - `cloud/functions/meal-photo-analysis/src/handler.test.ts`
+  - `cloud/functions/meal-photo-analysis/src/runtime.ts`
+  - `cloud/functions/meal-photo-analysis/src/runtime.test.ts`
+  - `cloud/functions/meal-photo-analysis/src/index.ts`
   - `tests/security/photoMealAnalysisIsolation.test.ts`
   - `tests/security/migrationShape.test.ts`
   - `tests/security/pgliteAuthHarness.ts`
 - **Accepted Change Baseline**：
   - 新增 `ai_analyses` 表、按 `(user_id, request_id)` 幂等去重、RLS own-row policies、撤销 `anon/authenticated` 直接表权限，仅 `service_role` 表权限。
-  - 新增 `create/get/confirm/discard_my_photo_meal_analysis` definer RPC，固定 `search_path`，参数不接受 `user_id`；确认 RPC 在同一事务里把候选项写入正式 `meals` 并更新分析状态。
+  - 新增 `create/get/confirm/discard_my_photo_meal_analysis` 与 `count_my_photo_meal_analyses_by_date` definer RPC，固定 `search_path`，参数不接受 `user_id`；确认 RPC 在同一事务里把候选项写入正式 `meals` 并更新分析状态；计数 RPC 只统计当前 `auth.uid()` 指定日期的分析记录。
   - 新增云函数纯 handler，依赖注入 storage/model/database/clock/logger；create 流程保存压缩图、调用模型、模型 JSON 校验失败重试一次、最终失败写入安全 failed 分析；get/confirm/discard 使用会话用户身份，不接受客户端 `userId`。
+  - 新增云函数 runtime factory 和 `src/index.ts` 入口：服务端环境读取 `PHOTO_MEAL_MODEL_PROVIDER`、`PHOTO_MEAL_MODEL_ENDPOINT`、`PHOTO_MEAL_MODEL_API_KEY`、`PHOTO_MEAL_MODEL_NAME`、`PHOTO_MEAL_DAILY_LIMIT`；模型请求使用 OpenAI-compatible JSON vision body；图片保存为私有 `users/{userHash}/photo-meal/{requestHash}/photo.webp|jpg` 对象 key；数据库访问走 auth-bound RPC，不向 RPC 传 `userId`。
   - 安全测试覆盖 A/B 用户隔离、直接表访问拒绝、跨用户确认无部分写入、非法 payload 拒绝、丢弃/已确认不可再次确认、迁移 shape、handler 错误脱敏和每日限流。
 - **Verification**：
   - RED：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/photoMealAnalysisIsolation.test.ts tests/security/migrationShape.test.ts` 先因 `0004_photo_meal_analysis.sql` 不存在失败。
   - 深度候选校验 RED：`photoMealAnalysisIsolation.test.ts` 先证明 DB RPC 会接受 `confidence: 2` 的非法候选项。
   - GREEN：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/photoMealAnalysisIsolation.test.ts tests/security/migrationShape.test.ts cloud/functions/meal-photo-analysis/src/handler.test.ts` 通过，3 个测试文件、13 条测试通过。
-  - `pnpm_config_verify_deps_before_run=warn pnpm typecheck` 通过。
+  - 2026-07-16 runtime RED/GREEN：`pnpm_config_verify_deps_before_run=warn pnpm vitest run cloud/functions/meal-photo-analysis/src/runtime.test.ts tests/security/photoMealAnalysisIsolation.test.ts tests/security/migrationShape.test.ts` 先因 `./runtime` 和 `count_my_photo_meal_analyses_by_date` 缺失失败；实现后通过，3 个测试文件、14 条测试通过。
+  - 2026-07-16 对象 key 碰撞 RED/GREEN：`pnpm_config_verify_deps_before_run=warn pnpm vitest run cloud/functions/meal-photo-analysis/src/runtime.test.ts -t "private per-user object keys"` 先证明替换非法字符会暴露 raw user segment 且可能碰撞；改为 SHA-256 base64url 哈希分段后通过。
+  - 2026-07-16 deployment docs RED/GREEN：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts` 先因部署文档缺少服务端 `PHOTO_MEAL_*` 变量失败；按 production build 后重跑通过，4/4。
   - `pnpm_config_verify_deps_before_run=warn pnpm lint` 通过。
+  - `pnpm_config_verify_deps_before_run=warn pnpm test` 通过，49 files / 438 tests。
+  - `pnpm_config_verify_deps_before_run=warn pnpm build` 通过；保留既有 Vite 大 chunk 警告。
+  - `pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line` 提权后通过，8 passed / 1 real CloudBase manual skipped。
   - `git diff --check` 通过。
-- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-14-photo-meal-security-handler-review.md`，结论 `APPROVED`；无 Critical/High 未解决问题。真实 CloudBase/模型 smoke 仍 blocked，owner：后续部署隔离环境配置。
+- **Evidence**：评审报告 `.ai/anvil/reviews/2026-07-14-photo-meal-security-handler-review.md`，结论 `APPROVED`；2026-07-16 续作 scoped review 记录见 `.ai/anvil/reviews/2026-07-16-photo-meal-runtime-review.md`。真实 CloudBase/模型 smoke 仍 blocked，owner：仓库所有者；next：配置隔离 CloudBase 环境、云函数服务端 `PHOTO_MEAL_*` secret、测试邮箱、测试图片策略和大陆网络设备后运行 manual/smoke。
 - **执行指令**：
   1. 写 PGlite RED：创建/读取/确认/丢弃只限本人；confirm 前 meals count 和 totals 不变；confirm 后创建 meals；坏 payload/跨用户/重复确认不产生部分写入。
   2. 写 handler RED：模型返回正常 JSON、缺字段、错误类型、低置信度、超时、限流和重复 requestId。
