@@ -12,6 +12,7 @@ pnpm typecheck:cloud-functions
 pnpm test
 pnpm build
 pnpm build:cloud-functions
+pnpm smoke:cloud-functions
 pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts
 pnpm test:e2e --project=mobile-chromium --reporter=line
 ```
@@ -28,7 +29,7 @@ pnpm test:e2e --project=mobile-chromium --reporter=line
 
 ## CloudBase 云函数与模型变量
 
-`cloud/functions/meal-photo-analysis` 提供可部署 `main` 入口和可注入 runtime factory。部署 `mealPhotoAnalysis` 云函数前，先执行 `pnpm typecheck:cloud-functions` 和 `pnpm build:cloud-functions`，确认 `cloud/functions/meal-photo-analysis/dist/index.js` 已生成；部署包需要包含该函数目录的整个 `dist/`（包括动态 chunk）和函数级服务端配置，入口 handler 指向 `main`。部署时必须在 CloudBase 服务端环境或函数级 secret 中配置以下变量；这些变量不得写入 `.env.example`、浏览器代码、构建日志、Playwright trace、截图或提交历史。
+`cloud/functions/meal-photo-analysis` 提供可部署 `main` 入口和可注入 runtime factory。部署 `mealPhotoAnalysis` 云函数前，先执行 `pnpm typecheck:cloud-functions`、`pnpm build:cloud-functions` 和 `pnpm smoke:cloud-functions`，确认 `cloud/functions/meal-photo-analysis/dist/index.js` 已生成且构建产物可导入 `main`；部署包需要包含该函数目录的整个 `dist/`（包括动态 chunk）和函数级服务端配置，入口 handler 指向 `main`。部署时必须在 CloudBase 服务端环境或函数级 secret 中配置以下变量；这些变量不得写入 `.env.example`、浏览器代码、构建日志、Playwright trace、截图或提交历史。
 
 ```bash
 CLOUDBASE_ENV_ID=<isolated-environment-id>

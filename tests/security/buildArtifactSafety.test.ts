@@ -107,11 +107,13 @@ describe('deployment and build artifact safety', () => {
     expect(rootPackage.scripts).toEqual(expect.objectContaining({
       'typecheck:cloud-functions': 'pnpm --filter meal-photo-analysis typecheck',
       'build:cloud-functions': 'pnpm --filter meal-photo-analysis build',
+      'smoke:cloud-functions': 'pnpm --filter meal-photo-analysis smoke',
     }));
     expect(functionPackage.main).toBe('dist/index.js');
     expect(functionPackage.files).toEqual(['dist']);
     expect(functionPackage.scripts).toEqual(expect.objectContaining({
       build: 'vite build --config vite.config.ts',
+      smoke: expect.stringContaining('dist/index.js'),
       typecheck: 'tsc -p tsconfig.json --noEmit',
       test: 'vitest run src',
     }));
@@ -127,6 +129,7 @@ describe('deployment and build artifact safety', () => {
     expect(tsconfig.include).toEqual(['src/**/*.ts']);
     expect(readProjectFile('cloud/functions/meal-photo-analysis/vite.config.ts')).toContain('src/index.ts');
     expect(readProjectFile('cloud/functions/meal-photo-analysis/src/index.ts')).toContain('export async function main');
+    expect(readProjectFile('docs/operations/deployment.md')).toContain('pnpm smoke:cloud-functions');
   });
 
   it('keeps the service worker away from user APIs and test-platform endpoints', () => {

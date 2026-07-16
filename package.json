@@ -13,6 +13,7 @@
     "typecheck": "tsc -b --pretty false",
     "typecheck:cloud-functions": "pnpm --filter meal-photo-analysis typecheck",
     "build:cloud-functions": "pnpm --filter meal-photo-analysis build",
+    "smoke:cloud-functions": "pnpm --filter meal-photo-analysis smoke",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
