@@ -37,7 +37,14 @@ export {
 
 type RuntimeEnv = Record<string, string | undefined>;
 
-export interface CloudBaseMealPhotoRuntimeApp extends ObjectStorageUploadFileClient {
+interface CloudBaseNodeStorageUploadClient {
+  uploadFile(input: {
+    cloudPath: string;
+    fileContent: Buffer;
+  }): Promise<unknown>;
+}
+
+export interface CloudBaseMealPhotoRuntimeApp extends CloudBaseNodeStorageUploadClient {
   rdb(): PhotoMealAnalysisRdbClient;
 }
 
@@ -56,6 +63,14 @@ export interface CloudBaseMealPhotoRuntimeDependencyOptions {
   env?: RuntimeEnv;
   fetch?: FetchLike;
   logger?: MealPhotoAnalysisCloudFunctionDependencies['logger'];
+}
+
+export function createCloudBaseObjectStorageUploadClient(
+  app: CloudBaseNodeStorageUploadClient,
+): ObjectStorageUploadFileClient {
+  return {
+    uploadFile: ({ cloudPath, fileContent }) => app.uploadFile({ cloudPath, fileContent }),
+  };
 }
 
 function readProcessEnv(): RuntimeEnv {
@@ -104,7 +119,7 @@ export function createCloudBaseMealPhotoRuntimeDependencies(
   return {
     env,
     fetch: resolveFetch(options.fetch),
-    storage: app,
+    storage: createCloudBaseObjectStorageUploadClient(app),
     rdb: app.rdb(),
     logger: options.logger,
   };

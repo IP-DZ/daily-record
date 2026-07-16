@@ -96,7 +96,8 @@ describe('meal photo cloud function runtime adapters', () => {
     expect(app.rdb).toHaveBeenCalledTimes(1);
     expect(dependencies.env.PHOTO_MEAL_MODEL_API_KEY).toBe('server-only-secret');
     expect(dependencies.fetch).toBe(fetch);
-    expect(dependencies.storage).toBe(app);
+    expect(dependencies.storage).not.toBe(app);
+    expect(dependencies.storage.uploadFile).toBeTypeOf('function');
     expect(dependencies.rdb).toBe(rdb);
     expect(dependencies.logger).toBe(console);
   });
@@ -111,6 +112,44 @@ describe('meal photo cloud function runtime adapters', () => {
 
     expect(resolveCloudBaseSdkModule(directSdk)).toBe(directSdk);
     expect(resolveCloudBaseSdkModule(wrappedSdk)).toBe(directSdk);
+  });
+
+  it('adapts CloudBase Node SDK storage uploads without passing unsupported content type fields', async () => {
+    const rdb = { rpc: vi.fn() };
+    const app = {
+      uploadFile: vi.fn().mockResolvedValue({ fileID: 'cloud://daily-record-test/users/hash/photo.webp' }),
+      rdb: vi.fn(() => rdb),
+    };
+    const cloudbase = {
+      init: vi.fn(() => app),
+    };
+
+    const dependencies = createCloudBaseMealPhotoRuntimeDependencies({
+      cloudbase,
+      env: {
+        CLOUDBASE_ENV_ID: 'daily-record-test',
+        CLOUDBASE_PUBLISHABLE_KEY: 'publishable-key',
+        PHOTO_MEAL_MODEL_PROVIDER: 'http-json',
+        PHOTO_MEAL_MODEL_ENDPOINT: 'https://model.example.test/v1/chat/completions',
+        PHOTO_MEAL_MODEL_API_KEY: 'server-only-secret',
+        PHOTO_MEAL_MODEL_NAME: 'vision-food-v1',
+      },
+      fetch: vi.fn(),
+    });
+
+    await createObjectStorageMealPhotoStorage(dependencies.storage).saveMealPhoto({
+      userId: 'user-a',
+      requestId: 'request-1',
+      photo,
+    });
+
+    expect(app.uploadFile).toHaveBeenCalledTimes(1);
+    const [uploadInput] = app.uploadFile.mock.calls[0] as [{ cloudPath: string; fileContent: Buffer; contentType?: string }];
+    expect(uploadInput).toEqual({
+      cloudPath: expect.stringMatching(/^users\/[A-Za-z0-9_-]{32}\/photo-meal\/[A-Za-z0-9_-]{32}\/photo\.webp$/),
+      fileContent: Buffer.from('QUJDRA==', 'base64'),
+    });
+    expect(uploadInput).not.toHaveProperty('contentType');
   });
 
   it('loads only server-side model configuration and validates daily limits', () => {

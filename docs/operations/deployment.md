@@ -48,7 +48,7 @@ PHOTO_MEAL_DAILY_LIMIT=20
 - `PHOTO_MEAL_MODEL_API_KEY` 只允许存在于云函数环境；仓库和前端构建产物只保存变量名，不保存值。
 - `PHOTO_MEAL_DAILY_LIMIT` 默认 20，合法范围 1–100；真实环境调高前应先确认模型成本和限流策略。
 - `CLOUDBASE_*` 只用于云函数初始化当前隔离环境；`CLOUDBASE_PUBLISHABLE_KEY` 是平台公开 key，不得替换成 TencentCloud SecretId / SecretKey 或数据库管理密钥。
-- 云函数存储适配器必须把图片保存到 `users/{userHash}/photo-meal/{requestHash}/photo.webp|jpg` 形式的私有对象 key；不得使用 raw 用户 ID 作为路径段，不得生成长期公开 URL，也不得把 data URL、签名 URL、模型原文响应或密钥写入日志。
+- 云函数存储适配器必须把图片保存到 `users/{userHash}/photo-meal/{requestHash}/photo.webp|jpg` 形式的私有对象 key；对 `@cloudbase/node-sdk` 的上传调用只传 `cloudPath` 和 `fileContent`，不要依赖 SDK 未声明的 `contentType` 字段；不得使用 raw 用户 ID 作为路径段，不得生成长期公开 URL，也不得把 data URL、签名 URL、模型原文响应或密钥写入日志。
 
 ## 自托管部署
 
