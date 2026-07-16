@@ -120,6 +120,7 @@ describe('deployment and build artifact safety', () => {
     }));
     expect(functionPackage.scripts?.smoke).toEqual(expect.stringContaining('unauthenticated'));
     expect(functionPackage.scripts?.smoke).toEqual(expect.stringContaining('CLOUDBASE_ENV_ID'));
+    expect(functionPackage.scripts?.smoke).not.toContain('server-only-secret');
     expect(functionPackage.dependencies).toEqual(expect.objectContaining({
       '@cloudbase/node-sdk': '3.18.3',
       '@daily-record/contracts': 'workspace:*',
