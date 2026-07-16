@@ -19,7 +19,7 @@ pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArti
 pnpm test:e2e --project=mobile-chromium --reporter=line
 ```
 
-`tests/security/buildArtifactSafety.test.ts` 需要在 `pnpm build` 后运行，扫描 `dist/`，确认正式产物没有服务端密钥标识、固定测试验证码、测试邮箱、`__daily-record-test-platform` endpoint 或 test-platform client 标记。
+`tests/security/buildArtifactSafety.test.ts` 需要在 `pnpm build` 后运行，扫描 `dist/`，确认正式产物没有服务端密钥标识、固定测试验证码、测试邮箱、`__daily-record-test-platform` endpoint 或 test-platform client 标记。真实 smoke 结果请复制 [`manual-smoke-result-template.md`](./manual-smoke-result-template.md) 填写脱敏摘要，不要把敏感值写进仓库、日志或截图。
 
 ## CloudBase 静态托管
 
@@ -69,6 +69,8 @@ PHOTO_MEAL_DAILY_LIMIT=20
 4. 进入 `/settings`，只在隔离测试账号中验证“清空我的数据”，确认清空后业务数据不可读，登录身份仍可退出。
 5. 断网刷新已访问过的页面，确认只看到静态应用外壳/离线提示；不得展示过期的私有餐食照片、签名 URL 或账号 API 响应。
 
+执行结果统一按 [`manual-smoke-result-template.md`](./manual-smoke-result-template.md) 记录，只写 pass/fail/blocked、耗时区间、错误码和下一步；不得记录真实邮箱、验证码、session、token、照片对象 key、签名 URL、模型响应原文或 secret。
+
 ## 性能预算
 
 - LCP 预算：大陆移动网络首屏 LCP 目标小于 3.5s，超过 4.0s 必须记录原因和下一步。
@@ -77,4 +79,4 @@ PHOTO_MEAL_DAILY_LIMIT=20
 
 ## 真实 blocker
 
-当前仓库已经提供本地可测的 `mealPhotoAnalysis` 云函数 handler、私有对象存储适配、auth-bound RPC 数据库网关和 `http-json` 模型 provider 适配；但仍无法自行完成真实 CloudBase、真实视觉模型和中国大陆网络 smoke，因为缺少隔离环境 ID、Publishable Key、服务端模型配置、两个测试邮箱和实际大陆网络设备。负责人为仓库所有者；下一步是提供隔离环境、云函数 secret 和测试账号后，按本文档与 [本地开发文档](./local-development.md) 记录不含邮箱、验证码、session、token、照片对象 key 或模型响应原文的 pass/fail 摘要。
+当前仓库已经提供本地可测的 `mealPhotoAnalysis` 云函数 handler、私有对象存储适配、auth-bound RPC 数据库网关和 `http-json` 模型 provider 适配；但仍无法自行完成真实 CloudBase、真实视觉模型和中国大陆网络 smoke，因为缺少隔离环境 ID、Publishable Key、服务端模型配置、两个测试邮箱和实际大陆网络设备。负责人为仓库所有者；下一步是提供隔离环境、云函数 secret 和测试账号后，按本文档、[本地开发文档](./local-development.md) 与 [`manual-smoke-result-template.md`](./manual-smoke-result-template.md) 记录不含邮箱、验证码、session、token、照片对象 key、签名 URL、模型响应原文或 secret 的 pass/fail 摘要。

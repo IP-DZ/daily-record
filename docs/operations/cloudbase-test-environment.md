@@ -16,7 +16,9 @@ export VITE_CLOUDBASE_REGION='ap-shanghai'
 
 `VITE_*` 只允许客户端公开配置。禁止使用 `CLOUDBASE_APIKEY`、`TENCENTCLOUD_SECRET_ID`、`TENCENTCLOUD_SECRET_KEY` 或其他服务端凭据。
 
-部署静态产物和中国大陆网络 smoke 的完整步骤见 [部署与上线验收](./deployment.md)。本文只负责 CloudBase 隔离环境和真实 OTP/RLS/云函数证据，不记录真实邮箱、验证码、session、token、照片对象 key 或模型响应原文。
+部署静态产物和中国大陆网络 smoke 的完整步骤见 [部署与上线验收](./deployment.md)。本文只负责 CloudBase 隔离环境和真实 OTP/RLS/云函数证据，执行结果统一复制 [`manual-smoke-result-template.md`](./manual-smoke-result-template.md) 填写；不记录真实邮箱、验证码、session、token、照片对象 key、签名 URL、模型响应原文或 secret。
+
+兼容历史验收口径：不记录真实邮箱、验证码、session、token、照片对象 key 或模型响应原文；新增模板进一步覆盖签名 URL 和 secret。
 
 ## 环境准备
 
@@ -71,7 +73,7 @@ export VITE_CLOUDBASE_REGION='ap-shanghai'
 
 ## 业务数据与云函数 smoke
 
-真实环境 manual spec 通过后，继续用 A/B 测试账号做以下最小业务 smoke；所有记录只写 pass/fail 和脱敏摘要。
+真实环境 manual spec 通过后，继续用 A/B 测试账号做以下最小业务 smoke；所有记录只写 pass/fail 和脱敏摘要，建议直接使用 [`manual-smoke-result-template.md`](./manual-smoke-result-template.md)。
 
 1. A 保存目标、手动餐食、体重和训练；B 登录后不得看到 A 的任何业务数据。
 2. A 上传一张专用测试餐食图片，触发 `mealPhotoAnalysis` 云函数；确认返回结果是“可编辑估算”，失败时只显示稳定错误，不暴露 provider detail、模型原文、照片对象 key 或签名 URL。
@@ -82,6 +84,6 @@ export VITE_CLOUDBASE_REGION='ap-shanghai'
 
 ## 已知 blocker 与负责人
 
-当前仓库没有提供隔离环境 ID、Publishable Key、两个隔离邮箱、云函数服务端 `PHOTO_MEAL_*` secret、真实模型 endpoint、测试图片策略和实际大陆网络设备，因此真实 OTP、CAPTCHA/限流交互、CloudBase 双 session 并发、跨设备、真实视觉模型和中国大陆网络 smoke 仍为 `blocked`。负责人为仓库所有者；下一步是按本文档完成隔离环境配置，再运行 manual spec 和业务 smoke，并记录不含真实邮箱、验证码、session、token、照片对象 key 或模型响应原文的结果摘要。
+当前仓库没有提供隔离环境 ID、Publishable Key、两个隔离邮箱、云函数服务端 `PHOTO_MEAL_*` secret、真实模型 endpoint、测试图片策略和实际大陆网络设备，因此真实 OTP、CAPTCHA/限流交互、CloudBase 双 session 并发、跨设备、真实视觉模型和中国大陆网络 smoke 仍为 `blocked`。负责人为仓库所有者；下一步是按本文档完成隔离环境配置，再运行 manual spec 和业务 smoke，并通过 [`manual-smoke-result-template.md`](./manual-smoke-result-template.md) 记录不含真实邮箱、验证码、session、token、照片对象 key、签名 URL、模型响应原文或 secret 的结果摘要。
 
 如果同时要验收首版上线，请在 manual spec 通过后继续执行 `docs/operations/deployment.md` 的中国大陆网络 smoke 和性能预算检查；不要用本地 test-platform E2E 代替真实云环境结论。

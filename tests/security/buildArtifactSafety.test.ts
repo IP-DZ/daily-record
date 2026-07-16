@@ -50,6 +50,7 @@ describe('deployment and build artifact safety', () => {
     expect(deployment).toContain('CLOUDBASE_PUBLISHABLE_KEY');
     expect(deployment).toContain('真实 blocker');
     expect(deployment).toContain('cloudbase-test-environment.md');
+    expect(deployment).toContain('manual-smoke-result-template.md');
     expect(deployment).toContain('local-development.md');
   });
 
@@ -87,7 +88,36 @@ describe('deployment and build artifact safety', () => {
       expect(environment).toContain(requiredTerm);
     }
     expect(environment).toContain('不记录真实邮箱、验证码、session、token、照片对象 key 或模型响应原文');
+    expect(environment).toContain('manual-smoke-result-template.md');
     expect(environment).not.toContain('本文档只用于验证邮箱 OTP、会话恢复、退出、两账号 RLS 与跨设备资料同步');
+  });
+
+  it('keeps manual smoke evidence templated and redacted', () => {
+    const manualSmokeTemplate = readProjectFile('docs/operations/manual-smoke-result-template.md');
+
+    for (const requiredTerm of [
+      '执行环境',
+      'Preflight',
+      'Manual Spec',
+      '业务 Smoke',
+      '中国大陆网络 Smoke',
+      '结果',
+      '阻塞项',
+      '不得记录真实邮箱',
+      '验证码',
+      'session',
+      'token',
+      '照片对象 key',
+      '签名 URL',
+      '模型响应原文',
+      'secret',
+    ]) {
+      expect(manualSmokeTemplate).toContain(requiredTerm);
+    }
+    expect(manualSmokeTemplate).not.toMatch(/[\w.+-]+@[\w.-]+/);
+    expect(manualSmokeTemplate).not.toContain('246810');
+    expect(manualSmokeTemplate).not.toMatch(/sk-[A-Za-z0-9]/);
+    expect(manualSmokeTemplate).not.toContain('cloud://');
   });
 
   it('keeps the meal photo cloud function as a buildable deployment package', () => {
