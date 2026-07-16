@@ -13,6 +13,38 @@ const requiredSections = [
   '阻塞项',
 ];
 
+const requiredChecks = [
+  '`pnpm preflight:cloudbase-manual`',
+  '`VITE_CLOUDBASE_*` 公开变量完整性',
+  '`CLOUDBASE_*` 云函数变量完整性',
+  '`PHOTO_MEAL_*` 模型变量完整性',
+  'CloudBase 地域合法',
+  '模型 endpoint 为 HTTPS',
+  'A 设备 1 邮箱 OTP 登录',
+  'B 设备邮箱 OTP 登录',
+  'A 设备 2 邮箱 OTP 登录',
+  'A/B 本地 session 隔离',
+  'A/B 目标与资料跨账号隔离',
+  'A 跨设备资料同步',
+  '退出后刷新仍为登录页',
+  'Playwright trace、screenshot、video 和 storageState 未保存敏感数据',
+  'A 保存目标、手动餐食、体重、训练',
+  'B 不可读取 A 的业务数据',
+  'A 触发 `mealPhotoAnalysis` 并返回可编辑估算',
+  '图片分析失败时只显示稳定错误',
+  '确认图片估算后今日汇总变化，确认前不变化',
+  'B 不可读取 A 的 `ai_analyses` 或 `meals`',
+  '每日限流按当前账号与日期生效',
+  '清空 A 应用数据后 A 业务数据不可读且 B 不受影响',
+  '`/` 与 `/onboarding` 首屏可访问',
+  '`/today`、`/photo-meal`、`/trends`、`/settings` 可访问',
+  'PWA 安装提示 / 更新提示',
+  '离线刷新只展示静态应用外壳或离线提示',
+  '私有图片、签名 URL 和账号 API 响应未被 service worker 缓存',
+  'LCP 小于目标预算或已记录原因',
+  '包体预算小于目标或已记录原因',
+];
+
 const sensitivePatterns = [
   {
     issue: 'email',
@@ -60,6 +92,14 @@ function validateSections(content, issues) {
   }
 }
 
+function validateRequiredChecks(content, issues) {
+  for (const check of requiredChecks) {
+    if (!content.includes(check)) {
+      addIssue(issues, 'missing-check', check);
+    }
+  }
+}
+
 function validateSensitiveMarkers(content, issues) {
   const lines = content.split(/\r?\n/);
   lines.forEach((line, index) => {
@@ -90,6 +130,7 @@ const content = readFileSync(resultPath, 'utf8');
 const issues = [];
 
 validateSections(content, issues);
+validateRequiredChecks(content, issues);
 validateSensitiveMarkers(content, issues);
 
 if (issues.length > 0) {
