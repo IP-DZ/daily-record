@@ -410,7 +410,9 @@ describe('App', () => {
     );
 
     expect(await screen.findByRole('heading', { name: '营养趋势' })).toBeInTheDocument();
-    expect(nutritionGoals.listByDateRange).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(nutritionGoals.listByDateRange).toHaveBeenCalled();
+    });
   });
 
   it('keeps the integrated trends route behind the authenticated session', async () => {
