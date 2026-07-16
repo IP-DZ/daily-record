@@ -56,8 +56,16 @@ async function assertDistHasNoForbiddenMarkers(distRoot) {
   assert(offenders.length === 0, `mealPhotoAnalysis dist contains forbidden markers: ${offenders.join(', ')}`);
 }
 
+async function assertDistHasNoSourceMaps(distRoot) {
+  const sourceMaps = (await collectTextFiles(distRoot))
+    .filter((file) => extname(file.pathname) === '.map')
+    .map((file) => file.pathname);
+  assert(sourceMaps.length === 0, `mealPhotoAnalysis dist must not include source maps: ${sourceMaps.join(', ')}`);
+}
+
 const distRoot = new URL('../dist/', import.meta.url);
 await assertDistHasNoForbiddenMarkers(distRoot);
+await assertDistHasNoSourceMaps(distRoot);
 
 const pkg = JSON.parse(await readFile(new URL('../dist/package.json', import.meta.url), 'utf8'));
 assert(pkg.type === 'module' && pkg.main === 'index.js', 'mealPhotoAnalysis dist package metadata is invalid');

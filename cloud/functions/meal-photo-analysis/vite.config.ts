@@ -35,7 +35,7 @@ export default defineConfig({
     rollupOptions: {
       external: ['node:crypto', '@cloudbase/node-sdk'],
     },
-    sourcemap: true,
+    sourcemap: false,
     target: 'node20',
   },
 });

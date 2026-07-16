@@ -128,6 +128,7 @@ describe('deployment and build artifact safety', () => {
     expect(smokeScript).toContain('@cloudbase\\/js-sdk');
     expect(smokeScript).toContain('window');
     expect(smokeScript).toContain('document');
+    expect(smokeScript).toContain('assertDistHasNoSourceMaps');
     expect(smokeScript).toContain('model.example.invalid');
     expect(smokeScript).not.toContain('server-only-secret');
     expect(functionPackage.dependencies).toEqual(expect.objectContaining({
@@ -148,6 +149,7 @@ describe('deployment and build artifact safety', () => {
     expect(functionViteConfig).toContain("main: 'index.js'");
     expect(functionViteConfig).toContain("'@cloudbase/node-sdk': '3.18.3'");
     expect(functionViteConfig).toContain("external: ['node:crypto', '@cloudbase/node-sdk']");
+    expect(functionViteConfig).toContain('sourcemap: false');
     const functionEntrypoint = readProjectFile('cloud/functions/meal-photo-analysis/src/index.ts');
     expect(functionEntrypoint).toContain("import('@cloudbase/node-sdk')");
     expect(functionEntrypoint).not.toContain('@cloudbase/js-sdk');
