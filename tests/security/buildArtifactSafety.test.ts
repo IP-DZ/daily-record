@@ -114,13 +114,17 @@ describe('deployment and build artifact safety', () => {
     expect(functionPackage.files).toEqual(['dist']);
     expect(functionPackage.scripts).toEqual(expect.objectContaining({
       build: 'vite build --config vite.config.ts',
-      smoke: expect.stringContaining('dist/package.json'),
+      smoke: 'node scripts/smoke-dist.mjs',
       typecheck: 'tsc -p tsconfig.json --noEmit',
       test: 'vitest run src',
     }));
-    expect(functionPackage.scripts?.smoke).toEqual(expect.stringContaining('unauthenticated'));
-    expect(functionPackage.scripts?.smoke).toEqual(expect.stringContaining('CLOUDBASE_ENV_ID'));
-    expect(functionPackage.scripts?.smoke).not.toContain('server-only-secret');
+    const smokeScript = readProjectFile('cloud/functions/meal-photo-analysis/scripts/smoke-dist.mjs');
+    expect(smokeScript).toContain('dist/package.json');
+    expect(smokeScript).toContain('unauthenticated');
+    expect(smokeScript).toContain('CLOUDBASE_ENV_ID');
+    expect(smokeScript).toContain('createCloudBaseObjectStorageUploadClient');
+    expect(smokeScript).toContain('contentType');
+    expect(smokeScript).not.toContain('server-only-secret');
     expect(functionPackage.dependencies).toEqual(expect.objectContaining({
       '@cloudbase/node-sdk': '3.18.3',
       '@daily-record/contracts': 'workspace:*',
