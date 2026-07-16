@@ -12,6 +12,9 @@ function writeDeploymentPackageMetadata(): PluginOption {
         `${JSON.stringify({
           type: 'module',
           main: 'index.js',
+          dependencies: {
+            '@cloudbase/node-sdk': '3.18.3',
+          },
         }, null, 2)}\n`,
       );
     },
@@ -30,7 +33,7 @@ export default defineConfig({
     minify: false,
     outDir: 'dist',
     rollupOptions: {
-      external: ['node:crypto'],
+      external: ['node:crypto', '@cloudbase/node-sdk'],
     },
     sourcemap: true,
     target: 'node20',

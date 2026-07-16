@@ -112,9 +112,22 @@ export function createCloudBaseMealPhotoRuntimeDependencies(
 
 let cachedMain: ((event: MealPhotoAnalysisCloudFunctionEvent) => Promise<unknown>) | null = null;
 
+export function resolveCloudBaseSdkModule(module: unknown): CloudBaseMealPhotoRuntimeSdk {
+  const maybeSdk = module as Partial<CloudBaseMealPhotoRuntimeSdk> & {
+    default?: Partial<CloudBaseMealPhotoRuntimeSdk>;
+  };
+  if (typeof maybeSdk.init === 'function') {
+    return maybeSdk as CloudBaseMealPhotoRuntimeSdk;
+  }
+  if (typeof maybeSdk.default?.init === 'function') {
+    return maybeSdk.default as CloudBaseMealPhotoRuntimeSdk;
+  }
+  throw new Error('Invalid meal photo CloudBase runtime config: cloudbase');
+}
+
 async function loadCloudBaseSdk(): Promise<CloudBaseMealPhotoRuntimeSdk> {
-  const cloudbaseModule = await import('@cloudbase/js-sdk');
-  return cloudbaseModule as unknown as CloudBaseMealPhotoRuntimeSdk;
+  const cloudbaseModule = await import('@cloudbase/node-sdk');
+  return resolveCloudBaseSdkModule(cloudbaseModule);
 }
 
 export async function main(event: MealPhotoAnalysisCloudFunctionEvent): Promise<unknown> {

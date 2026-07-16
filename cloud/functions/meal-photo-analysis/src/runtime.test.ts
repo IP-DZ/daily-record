@@ -12,6 +12,7 @@ import {
   createMealPhotoAnalysisCloudFunction as createEntrypointFunction,
   createMealPhotoAnalysisHandler as createEntrypointHandler,
   main as mealPhotoAnalysisMain,
+  resolveCloudBaseSdkModule,
 } from './index';
 
 const photo: PreparedMealPhoto = {
@@ -98,6 +99,18 @@ describe('meal photo cloud function runtime adapters', () => {
     expect(dependencies.storage).toBe(app);
     expect(dependencies.rdb).toBe(rdb);
     expect(dependencies.logger).toBe(console);
+  });
+
+  it('normalizes CJS-wrapped CloudBase SDK modules from bundled dynamic imports', () => {
+    const directSdk = {
+      init: vi.fn(),
+    };
+    const wrappedSdk = {
+      default: directSdk,
+    };
+
+    expect(resolveCloudBaseSdkModule(directSdk)).toBe(directSdk);
+    expect(resolveCloudBaseSdkModule(wrappedSdk)).toBe(directSdk);
   });
 
   it('loads only server-side model configuration and validates daily limits', () => {

@@ -118,11 +118,14 @@ describe('deployment and build artifact safety', () => {
       typecheck: 'tsc -p tsconfig.json --noEmit',
       test: 'vitest run src',
     }));
+    expect(functionPackage.scripts?.smoke).toEqual(expect.stringContaining('unauthenticated'));
+    expect(functionPackage.scripts?.smoke).toEqual(expect.stringContaining('CLOUDBASE_ENV_ID'));
     expect(functionPackage.dependencies).toEqual(expect.objectContaining({
-      '@cloudbase/js-sdk': '3.6.2',
+      '@cloudbase/node-sdk': '3.18.3',
       '@daily-record/contracts': 'workspace:*',
       zod: expect.any(String),
     }));
+    expect(functionPackage.dependencies).not.toHaveProperty('@cloudbase/js-sdk');
     expect(tsconfig.compilerOptions).toEqual(expect.objectContaining({
       moduleResolution: 'Bundler',
       outDir: 'dist',
@@ -133,7 +136,12 @@ describe('deployment and build artifact safety', () => {
     expect(functionViteConfig).toContain('package.json');
     expect(functionViteConfig).toContain("type: 'module'");
     expect(functionViteConfig).toContain("main: 'index.js'");
-    expect(readProjectFile('cloud/functions/meal-photo-analysis/src/index.ts')).toContain('export async function main');
+    expect(functionViteConfig).toContain("'@cloudbase/node-sdk': '3.18.3'");
+    expect(functionViteConfig).toContain("external: ['node:crypto', '@cloudbase/node-sdk']");
+    const functionEntrypoint = readProjectFile('cloud/functions/meal-photo-analysis/src/index.ts');
+    expect(functionEntrypoint).toContain("import('@cloudbase/node-sdk')");
+    expect(functionEntrypoint).not.toContain('@cloudbase/js-sdk');
+    expect(functionEntrypoint).toContain('export async function main');
     expect(readProjectFile('docs/operations/deployment.md')).toContain('pnpm test:cloud-functions');
     expect(readProjectFile('docs/operations/deployment.md')).toContain('pnpm smoke:cloud-functions');
   });
