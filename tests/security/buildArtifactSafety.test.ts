@@ -126,6 +126,7 @@ describe('deployment and build artifact safety', () => {
     for (const requiredTerm of [
       'pnpm/action-setup',
       'actions/setup-node',
+      'node-version: 24',
       'pnpm lint',
       'pnpm typecheck',
       'pnpm test:cloud-functions',
