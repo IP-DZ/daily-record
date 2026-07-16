@@ -17,8 +17,8 @@ function writeSmokeResult(content: string): string {
   return filePath;
 }
 
-function runValidator(content: string) {
-  return spawnSync(process.execPath, [scriptPath, writeSmokeResult(content)], {
+function runValidator(content: string, args: string[] = []) {
+  return spawnSync(process.execPath, [scriptPath, ...args, writeSmokeResult(content)], {
     cwd: repoRoot,
     env: {
       PATH: process.env.PATH ?? '',
@@ -188,5 +188,36 @@ describe('manual smoke result validator', () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('missing-check-status');
     expect(result.stderr).toContain('A 触发 `mealPhotoAnalysis` 并返回可编辑估算');
+  });
+
+  it('requires every critical smoke check to pass before release readiness', () => {
+    const blockedSmokeResult = sanitizedSmokeResult.replace(
+      '- 每日限流按当前账号与日期生效：pass',
+      '- 每日限流按当前账号与日期生效：blocked',
+    );
+    const result = runValidator(blockedSmokeResult, ['--release-ready']);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('release-not-ready');
+    expect(result.stderr).toContain('每日限流按当前账号与日期生效');
+  });
+
+  it('rejects unresolved pass, fail, or blocked placeholders for release readiness', () => {
+    const unresolvedSmokeResult = sanitizedSmokeResult.replace(
+      '- 每日限流按当前账号与日期生效：pass',
+      '- 每日限流按当前账号与日期生效：pass / fail / blocked',
+    );
+    const result = runValidator(unresolvedSmokeResult, ['--release-ready']);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('release-not-ready');
+    expect(result.stderr).toContain('每日限流按当前账号与日期生效');
+  });
+
+  it('passes release readiness only when every critical smoke check passes and release is yes', () => {
+    const result = runValidator(sanitizedSmokeResult, ['--release-ready']);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Manual smoke release readiness validation passed');
   });
 });

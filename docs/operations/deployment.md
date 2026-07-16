@@ -81,7 +81,13 @@ PHOTO_MEAL_DAILY_LIMIT=20
 pnpm validate:manual-smoke-result path/to/manual-smoke-result.md
 ```
 
-该校验会拦截真实邮箱、验证码、session/JWT、CloudBase 对象路径、签名 URL、secret-like 值、公网 IP 和 CloudBase 环境 ID；只输出问题类型和行号，不回显敏感原文。
+该校验会拦截真实邮箱、验证码、session/JWT、CloudBase 对象路径、签名 URL、secret-like 值、公网 IP 和 CloudBase 环境 ID；只输出问题类型和行号，不回显敏感原文。准备取消 Draft / 正式发布前，必须再运行：
+
+```bash
+pnpm validate:manual-smoke-result --release-ready path/to/manual-smoke-result.md
+```
+
+`--release-ready` 要求所有关键 smoke 项都是 `pass`，且“是否可发布”为 `yes`；任何 `fail`、`blocked` 或空状态都表示不能发布。
 
 ## 性能预算
 

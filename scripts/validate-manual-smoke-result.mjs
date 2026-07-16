@@ -46,6 +46,7 @@ const requiredChecks = [
 ];
 
 const statusPattern = '[：:]\\s*(?:pass|fail|blocked)\\b';
+const releaseReadyStatusPattern = '[：:]\\s*pass\\s*(?:\\r?\\n|$)';
 
 const sensitivePatterns = [
   {
@@ -108,6 +109,19 @@ function validateRequiredChecks(content, issues) {
   }
 }
 
+function validateReleaseReadiness(content, issues) {
+  for (const check of requiredChecks) {
+    const escapedCheck = check.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const checkReadyPattern = new RegExp(`${escapedCheck}${releaseReadyStatusPattern}`, 'i');
+    if (!checkReadyPattern.test(content)) {
+      addIssue(issues, 'release-not-ready', check);
+    }
+  }
+  if (!/是否可发布[：:]\s*yes\b/i.test(content)) {
+    addIssue(issues, 'release-not-ready', '是否可发布');
+  }
+}
+
 function validateSensitiveMarkers(content, issues) {
   const lines = content.split(/\r?\n/);
   lines.forEach((line, index) => {
@@ -123,9 +137,12 @@ function printIssue({ issue, detail }) {
   console.error(`fail ${issue}: ${detail}`);
 }
 
-const resultPath = process.argv[2];
+const args = process.argv.slice(2);
+const releaseReady = args.includes('--release-ready');
+const positionalArgs = args.filter((arg) => arg !== '--release-ready');
+const resultPath = positionalArgs[0];
 if (!resultPath) {
-  console.error('Usage: node scripts/validate-manual-smoke-result.mjs <manual-smoke-result.md>');
+  console.error('Usage: node scripts/validate-manual-smoke-result.mjs [--release-ready] <manual-smoke-result.md>');
   process.exit(1);
 }
 
@@ -139,6 +156,9 @@ const issues = [];
 
 validateSections(content, issues);
 validateRequiredChecks(content, issues);
+if (releaseReady) {
+  validateReleaseReadiness(content, issues);
+}
 validateSensitiveMarkers(content, issues);
 
 if (issues.length > 0) {
@@ -149,4 +169,8 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('Manual smoke result validation passed');
+console.log(
+  releaseReady
+    ? 'Manual smoke release readiness validation passed'
+    : 'Manual smoke result validation passed',
+);
