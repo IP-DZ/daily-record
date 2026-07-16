@@ -15,6 +15,10 @@ function readProjectFile(path: string): string {
   return readFileSync(resolve(repoRoot, path), 'utf8');
 }
 
+function readJsonProjectFile<T>(path: string): T {
+  return JSON.parse(readProjectFile(path)) as T;
+}
+
 function collectTextFiles(root: string): string[] {
   return readdirSync(root)
     .flatMap((entry) => {
@@ -82,6 +86,43 @@ describe('deployment and build artifact safety', () => {
     expect(environment).not.toContain('本文档只用于验证邮箱 OTP、会话恢复、退出、两账号 RLS 与跨设备资料同步');
   });
 
+  it('keeps the meal photo cloud function as a buildable deployment package', () => {
+    const workspace = readProjectFile('pnpm-workspace.yaml');
+    const rootPackage = readJsonProjectFile<{ scripts?: Record<string, unknown> }>('package.json');
+    const functionPackage = readJsonProjectFile<{
+      main?: unknown;
+      files?: unknown;
+      scripts?: Record<string, unknown>;
+      dependencies?: Record<string, unknown>;
+    }>('cloud/functions/meal-photo-analysis/package.json');
+    const tsconfig = readJsonProjectFile<{ compilerOptions?: Record<string, unknown>; include?: unknown }>(
+      'cloud/functions/meal-photo-analysis/tsconfig.json',
+    );
+
+    expect(workspace).toContain('cloud/functions/*');
+    expect(rootPackage.scripts).toEqual(expect.objectContaining({
+      'typecheck:cloud-functions': 'pnpm --filter meal-photo-analysis typecheck',
+      'build:cloud-functions': 'pnpm --filter meal-photo-analysis build',
+    }));
+    expect(functionPackage.main).toBe('dist/index.js');
+    expect(functionPackage.files).toEqual(['dist']);
+    expect(functionPackage.scripts).toEqual(expect.objectContaining({
+      build: 'vite build --config vite.config.ts',
+      typecheck: 'tsc -p tsconfig.json --noEmit',
+      test: 'vitest run src',
+    }));
+    expect(functionPackage.dependencies).toEqual(expect.objectContaining({
+      '@daily-record/contracts': 'workspace:*',
+      zod: expect.any(String),
+    }));
+    expect(tsconfig.compilerOptions).toEqual(expect.objectContaining({
+      moduleResolution: 'Bundler',
+      outDir: 'dist',
+    }));
+    expect(tsconfig.include).toEqual(['src/**/*.ts']);
+    expect(readProjectFile('cloud/functions/meal-photo-analysis/vite.config.ts')).toContain('src/index.ts');
+  });
+
   it('keeps the service worker away from user APIs and test-platform endpoints', () => {
     const viteConfig = readProjectFile('vite.config.ts');
 
@@ -89,6 +130,7 @@ describe('deployment and build artifact safety', () => {
     expect(viteConfig).toContain('navigateFallbackDenylist');
     expect(viteConfig).toContain('/^\\/__/');
     expect(viteConfig).toContain('/^\\/api\\//');
+    expect(viteConfig).toContain("apply: 'build'");
   });
 
   it.runIf(hasProductionDist)('keeps production build artifacts free of test and server-secret markers', () => {

@@ -32,6 +32,7 @@ function resolvePlatformLoader(platformLoader: PlatformLoader): PlatformLoader {
 function writeBuildModeMarker(mode: string): PluginOption {
   return {
     name: 'write-build-mode-marker',
+    apply: 'build',
     closeBundle() {
       writeFileSync(resolve('dist/.build-mode'), mode);
     },

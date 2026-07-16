@@ -42,13 +42,15 @@ pnpm dev
 ```bash
 pnpm_config_verify_deps_before_run=warn pnpm lint
 pnpm_config_verify_deps_before_run=warn pnpm typecheck
+pnpm_config_verify_deps_before_run=warn pnpm typecheck:cloud-functions
 pnpm_config_verify_deps_before_run=warn pnpm test
 pnpm_config_verify_deps_before_run=warn pnpm build
+pnpm_config_verify_deps_before_run=warn pnpm build:cloud-functions
 pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts
 pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line
 ```
 
-最近证据已写回 Anvil 计划：49 个 Vitest 文件通过（438 passed），production build 通过，构建产物安全扫描 4/4，通过移动端 E2E 8 passed / 1 real CloudBase manual skipped。
+最近证据已写回 Anvil 计划：49 个 Vitest 文件通过（440 passed），production build 通过，云函数 typecheck/build 通过，构建产物安全扫描 6/6，通过移动端 E2E 8 passed / 1 real CloudBase manual skipped。
 
 ## 技术栈
 

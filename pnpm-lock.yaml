@@ -82,6 +82,15 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(jsdom@29.1.1)(vite@8.1.4(terser@5.49.0))
 
+  cloud/functions/meal-photo-analysis:
+    dependencies:
+      '@daily-record/contracts':
+        specifier: workspace:*
+        version: link:../../../packages/contracts
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+
   packages/contracts:
     dependencies:
       zod:

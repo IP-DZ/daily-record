@@ -11,6 +11,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
+    "typecheck:cloud-functions": "pnpm --filter meal-photo-analysis typecheck",
+    "build:cloud-functions": "pnpm --filter meal-photo-analysis build",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
