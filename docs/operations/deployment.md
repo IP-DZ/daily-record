@@ -71,7 +71,13 @@ PHOTO_MEAL_DAILY_LIMIT=20
 4. 进入 `/settings`，只在隔离测试账号中验证“清空我的数据”，确认清空后业务数据不可读，登录身份仍可退出。
 5. 断网刷新已访问过的页面，确认只看到静态应用外壳/离线提示；不得展示过期的私有餐食照片、签名 URL 或账号 API 响应。
 
-执行结果统一按 [`manual-smoke-result-template.md`](./manual-smoke-result-template.md) 记录，只写 pass/fail/blocked、耗时区间、错误码和下一步；不得记录真实邮箱、验证码、session、token、照片对象 key、签名 URL、模型响应原文或 secret。
+执行结果统一按 [`manual-smoke-result-template.md`](./manual-smoke-result-template.md) 记录，只写 pass/fail/blocked、耗时区间、错误码和下一步；不得记录真实邮箱、验证码、session、token、照片对象 key、签名 URL、模型响应原文或 secret。将填写后的结果提交或分享前，先运行：
+
+```bash
+pnpm validate:manual-smoke-result path/to/manual-smoke-result.md
+```
+
+该校验只输出问题类型和行号，不回显敏感原文。
 
 ## 性能预算
 

@@ -16,6 +16,7 @@
     "build:cloud-functions": "pnpm --filter meal-photo-analysis build",
     "smoke:cloud-functions": "pnpm --filter meal-photo-analysis smoke",
     "preflight:cloudbase-manual": "node scripts/cloudbase-manual-preflight.mjs",
+    "validate:manual-smoke-result": "node scripts/validate-manual-smoke-result.mjs",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",

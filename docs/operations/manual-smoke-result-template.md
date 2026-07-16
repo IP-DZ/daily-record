@@ -1,6 +1,6 @@
 # 真实 CloudBase Smoke 脱敏结果模板
 
-> 复制本模板到你的验收记录中填写 pass、fail、blocked 和脱敏摘要。不得记录真实邮箱、验证码、session、token、照片对象 key、签名 URL、模型响应原文、服务端 secret/key、完整请求体或完整响应体。
+> 复制本模板到你的验收记录中填写 pass、fail、blocked 和脱敏摘要。不得记录真实邮箱、验证码、session、token、照片对象 key、签名 URL、模型响应原文、服务端 secret/key、完整请求体或完整响应体。提交或分享填写后的结果前，先运行 `pnpm validate:manual-smoke-result path/to/manual-smoke-result.md`；该校验只输出问题类型和行号，不回显敏感原文。
 
 ## 执行环境
 
