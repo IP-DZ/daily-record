@@ -61,6 +61,9 @@ jobs:
       - name: Validate manual smoke result template
         run: pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md
 
+      - name: Validate CloudBase RPC docs
+        run: pnpm validate:cloudbase-rpc-docs
+
       - name: Scan production build artifacts
         run: pnpm vitest run tests/security/buildArtifactSafety.test.ts
 
