@@ -57,6 +57,31 @@ describe('deployment and build artifact safety', () => {
     expect(example).not.toMatch(/(SECRET|TOKEN|OTP|246810|example\.test|TENCENTCLOUD|CLOUDBASE_APIKEY)/i);
   });
 
+  it('documents the full CloudBase isolation smoke scope beyond onboarding data', () => {
+    const environment = readProjectFile('docs/operations/cloudbase-test-environment.md');
+
+    for (const requiredTerm of [
+      'profiles',
+      'nutrition_goals',
+      'meals',
+      'weight_entries',
+      'workouts',
+      'workout_exercises',
+      'workout_sets',
+      'ai_analyses',
+      'delete_my_application_data',
+      'mealPhotoAnalysis',
+      'PHOTO_MEAL_MODEL_PROVIDER',
+      'PHOTO_MEAL_MODEL_API_KEY',
+      'CLOUDBASE_MANUAL_E2E=1',
+      '中国大陆网络 smoke',
+    ]) {
+      expect(environment).toContain(requiredTerm);
+    }
+    expect(environment).toContain('不记录真实邮箱、验证码、session、token、照片对象 key 或模型响应原文');
+    expect(environment).not.toContain('本文档只用于验证邮箱 OTP、会话恢复、退出、两账号 RLS 与跨设备资料同步');
+  });
+
   it('keeps the service worker away from user APIs and test-platform endpoints', () => {
     const viteConfig = readProjectFile('vite.config.ts');
 
