@@ -177,4 +177,16 @@ describe('manual smoke result validator', () => {
     expect(result.stderr).toContain('每日限流按当前账号与日期生效');
     expect(result.stderr).toContain('私有图片、签名 URL 和账号 API 响应未被 service worker 缓存');
   });
+
+  it('fails when a required check is present without a pass, fail, or blocked status', () => {
+    const incompleteStatusResult = sanitizedSmokeResult.replace(
+      '- A 触发 `mealPhotoAnalysis` 并返回可编辑估算：pass',
+      '- A 触发 `mealPhotoAnalysis` 并返回可编辑估算：',
+    );
+    const result = runValidator(incompleteStatusResult);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('missing-check-status');
+    expect(result.stderr).toContain('A 触发 `mealPhotoAnalysis` 并返回可编辑估算');
+  });
 });

@@ -45,6 +45,8 @@ const requiredChecks = [
   '包体预算小于目标或已记录原因',
 ];
 
+const statusPattern = '[：:]\\s*(?:pass|fail|blocked)\\b';
+
 const sensitivePatterns = [
   {
     issue: 'email',
@@ -96,6 +98,12 @@ function validateRequiredChecks(content, issues) {
   for (const check of requiredChecks) {
     if (!content.includes(check)) {
       addIssue(issues, 'missing-check', check);
+      continue;
+    }
+    const escapedCheck = check.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const checkStatusPattern = new RegExp(`${escapedCheck}${statusPattern}`, 'i');
+    if (!checkStatusPattern.test(content)) {
+      addIssue(issues, 'missing-check-status', check);
     }
   }
 }
