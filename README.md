@@ -51,6 +51,7 @@ pnpm_config_verify_deps_before_run=warn pnpm build
 pnpm_config_verify_deps_before_run=warn pnpm build:cloud-functions
 pnpm_config_verify_deps_before_run=warn pnpm smoke:cloud-functions
 pnpm_config_verify_deps_before_run=warn pnpm preflight:cloudbase-manual
+pnpm_config_verify_deps_before_run=warn pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md
 pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts
 pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line
 ```
@@ -72,7 +73,7 @@ pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium 
 
 真实 smoke 必须在隔离 CloudBase 环境、真实测试邮箱、服务端 `PHOTO_MEAL_*` 模型配置和中国大陆网络设备准备后执行。执行摘要请复制脱敏模板填写，不得记录真实邮箱、验证码、session、token、照片对象 key、签名 URL、模型响应原文或 secret。
 
-真实环境变量配置完成后，先运行 `pnpm preflight:cloudbase-manual`。该命令只输出变量名和检查结果，不输出实际 key、endpoint 或 secret。
+真实环境变量配置完成后，先运行 `pnpm preflight:cloudbase-manual`。该命令只输出变量名和检查结果，不输出实际 key、endpoint 或 secret。填写真实 smoke 结果后，先运行 `pnpm validate:manual-smoke-result path/to/manual-smoke-result.md`，确认记录中没有真实邮箱、验证码、session、token、照片对象 key、签名 URL、模型响应原文、CloudBase 环境 ID、公网 IP 或 secret。
 
 ## 安全原则
 

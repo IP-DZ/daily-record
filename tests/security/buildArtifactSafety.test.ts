@@ -111,6 +111,9 @@ describe('deployment and build artifact safety', () => {
       '签名 URL',
       '模型响应原文',
       'secret',
+      'CloudBase 环境 ID',
+      '公网 IP',
+      'validate:manual-smoke-result',
     ]) {
       expect(manualSmokeTemplate).toContain(requiredTerm);
     }
@@ -141,6 +144,7 @@ describe('deployment and build artifact safety', () => {
       'pnpm build',
       'pnpm build:cloud-functions',
       'pnpm smoke:cloud-functions',
+      'pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md',
       'pnpm vitest run tests/security/buildArtifactSafety.test.ts',
       'pnpm exec playwright install --with-deps chromium',
       'pnpm test:e2e --project=mobile-chromium --reporter=line',
@@ -183,6 +187,7 @@ describe('deployment and build artifact safety', () => {
       'build:cloud-functions': 'pnpm --filter meal-photo-analysis build',
       'smoke:cloud-functions': 'pnpm --filter meal-photo-analysis smoke',
       'preflight:cloudbase-manual': 'node scripts/cloudbase-manual-preflight.mjs',
+      'validate:manual-smoke-result': 'node scripts/validate-manual-smoke-result.mjs',
     }));
     const manualPreflight = readProjectFile('scripts/cloudbase-manual-preflight.mjs');
     expect(manualPreflight).toContain('CloudBase manual smoke preflight passed');

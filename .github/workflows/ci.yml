@@ -58,6 +58,9 @@ jobs:
       - name: Smoke cloud function dist
         run: pnpm smoke:cloud-functions
 
+      - name: Validate manual smoke result template
+        run: pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md
+
       - name: Scan production build artifacts
         run: pnpm vitest run tests/security/buildArtifactSafety.test.ts
 
