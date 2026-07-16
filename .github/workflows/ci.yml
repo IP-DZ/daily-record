@@ -67,6 +67,9 @@ jobs:
       - name: Validate CloudBase environment docs
         run: pnpm validate:cloudbase-env-docs
 
+      - name: Validate CloudBase table docs
+        run: pnpm validate:cloudbase-table-docs
+
       - name: Scan production build artifacts
         run: pnpm vitest run tests/security/buildArtifactSafety.test.ts
 

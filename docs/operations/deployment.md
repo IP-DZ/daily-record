@@ -18,13 +18,14 @@ pnpm preflight:cloudbase-manual
 pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md
 pnpm validate:cloudbase-rpc-docs
 pnpm validate:cloudbase-env-docs
+pnpm validate:cloudbase-table-docs
 pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts
 pnpm test:e2e --project=mobile-chromium --reporter=line
 ```
 
 `tests/security/buildArtifactSafety.test.ts` 需要在 `pnpm build` 后运行，扫描 `dist/`，确认正式产物没有服务端密钥标识、固定测试验证码、测试邮箱、`__daily-record-test-platform` endpoint 或 test-platform client 标记。真实 smoke 结果请复制 [`manual-smoke-result-template.md`](./manual-smoke-result-template.md) 填写脱敏摘要，不要把敏感值写进仓库、日志或截图。
 
-GitHub Actions 的 `.github/workflows/ci.yml` 会在 push 和 pull request 上运行不需要真实 CloudBase secret 的自动门禁：lint、typecheck、云函数 test/typecheck/build/smoke、单元与安全测试、production build、真实 smoke 模板脱敏校验、CloudBase RPC 文档一致性校验、CloudBase 环境变量文档一致性校验、产物扫描和 test-platform 移动端 E2E。真实 `pnpm preflight:cloudbase-manual` 与 CloudBase manual smoke 需要隔离环境变量、测试邮箱和大陆网络设备，必须由发布人按本文档手动执行，不得在 CI 中放入服务端模型 secret。
+GitHub Actions 的 `.github/workflows/ci.yml` 会在 push 和 pull request 上运行不需要真实 CloudBase secret 的自动门禁：lint、typecheck、云函数 test/typecheck/build/smoke、单元与安全测试、production build、真实 smoke 模板脱敏校验、CloudBase RPC 文档一致性校验、CloudBase 环境变量文档一致性校验、CloudBase 数据表文档一致性校验、产物扫描和 test-platform 移动端 E2E。真实 `pnpm preflight:cloudbase-manual` 与 CloudBase manual smoke 需要隔离环境变量、测试邮箱和大陆网络设备，必须由发布人按本文档手动执行，不得在 CI 中放入服务端模型 secret。
 
 ## CloudBase 静态托管
 

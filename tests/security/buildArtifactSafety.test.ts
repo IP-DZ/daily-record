@@ -147,6 +147,7 @@ describe('deployment and build artifact safety', () => {
       'pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md',
       'pnpm validate:cloudbase-rpc-docs',
       'pnpm validate:cloudbase-env-docs',
+      'pnpm validate:cloudbase-table-docs',
       'pnpm vitest run tests/security/buildArtifactSafety.test.ts',
       'pnpm exec playwright install --with-deps chromium',
       'pnpm test:e2e --project=mobile-chromium --reporter=line',
@@ -192,6 +193,7 @@ describe('deployment and build artifact safety', () => {
       'validate:manual-smoke-result': 'node scripts/validate-manual-smoke-result.mjs',
       'validate:cloudbase-rpc-docs': 'node scripts/validate-cloudbase-rpc-docs.mjs',
       'validate:cloudbase-env-docs': 'node scripts/validate-cloudbase-env-docs.mjs',
+      'validate:cloudbase-table-docs': 'node scripts/validate-cloudbase-table-docs.mjs',
     }));
     const manualPreflight = readProjectFile('scripts/cloudbase-manual-preflight.mjs');
     expect(manualPreflight).toContain('CloudBase manual smoke preflight passed');

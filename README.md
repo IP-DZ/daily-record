@@ -54,6 +54,7 @@ pnpm_config_verify_deps_before_run=warn pnpm preflight:cloudbase-manual
 pnpm_config_verify_deps_before_run=warn pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md
 pnpm_config_verify_deps_before_run=warn pnpm validate:cloudbase-rpc-docs
 pnpm_config_verify_deps_before_run=warn pnpm validate:cloudbase-env-docs
+pnpm_config_verify_deps_before_run=warn pnpm validate:cloudbase-table-docs
 pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts
 pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line
 ```
