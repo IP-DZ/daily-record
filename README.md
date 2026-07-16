@@ -7,6 +7,7 @@
 首版本地实现、自动化验证、移动端 E2E、Anvil 审阅和 GitHub 推送已完成。当前分支：
 
 - GitHub 分支：`feature/cloudbase-auth`
+- Draft PR：[#2 实现个人饮食与训练记录 PWA](https://github.com/IP-DZ/daily-record/pull/2)
 - 本地首版功能基线提交：`390ee524 test: add system hardening e2e`
 - GitHub CI：`.github/workflows/ci.yml` 会在 push / pull request 上运行不需要真实 CloudBase secret 的自动门禁
 - 主计划：[`docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md`](docs/anvil/plans/2026-07-13-personal-fitness-nutrition-pwa-plan.md)
