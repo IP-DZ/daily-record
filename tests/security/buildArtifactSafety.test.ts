@@ -109,7 +109,13 @@ describe('deployment and build artifact safety', () => {
       'typecheck:cloud-functions': 'pnpm --filter meal-photo-analysis typecheck',
       'build:cloud-functions': 'pnpm --filter meal-photo-analysis build',
       'smoke:cloud-functions': 'pnpm --filter meal-photo-analysis smoke',
+      'preflight:cloudbase-manual': 'node scripts/cloudbase-manual-preflight.mjs',
     }));
+    const manualPreflight = readProjectFile('scripts/cloudbase-manual-preflight.mjs');
+    expect(manualPreflight).toContain('CloudBase manual smoke preflight passed');
+    expect(manualPreflight).toContain('PHOTO_MEAL_MODEL_API_KEY');
+    expect(manualPreflight).toContain('VITE_CLOUDBASE_ENV_ID');
+    expect(manualPreflight).not.toMatch(/console\.(log|error)\([^)]*process\.env/);
     expect(functionPackage.main).toBe('dist/index.js');
     expect(functionPackage.files).toEqual(['dist']);
     expect(functionPackage.scripts).toEqual(expect.objectContaining({

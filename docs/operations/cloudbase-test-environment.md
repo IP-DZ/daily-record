@@ -45,8 +45,11 @@ export VITE_CLOUDBASE_REGION='ap-shanghai'
    CI=true pnpm typecheck
    CI=true pnpm test
    CI=true pnpm build
+   CI=true pnpm preflight:cloudbase-manual
    CI=true pnpm test:e2e -- --project=mobile-chromium
    ```
+
+   `pnpm preflight:cloudbase-manual` 只检查变量是否齐全、地域和模型配置是否合法、以及是否把服务端 secret 错放进 `VITE_*` 公开变量；它只输出变量名与 pass/fail，不输出实际 env id、key、endpoint 或 secret。
 
 7. 显式启用人工 spec：
 

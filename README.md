@@ -48,11 +48,12 @@ pnpm_config_verify_deps_before_run=warn pnpm test
 pnpm_config_verify_deps_before_run=warn pnpm build
 pnpm_config_verify_deps_before_run=warn pnpm build:cloud-functions
 pnpm_config_verify_deps_before_run=warn pnpm smoke:cloud-functions
+pnpm_config_verify_deps_before_run=warn pnpm preflight:cloudbase-manual
 pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts
 pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line
 ```
 
-最近证据已写回 Anvil 计划：49 个 Vitest 文件通过（443 passed），production build 通过，云函数 package test/typecheck/build/smoke 通过并生成 `dist/package.json` ESM + `@cloudbase/node-sdk` 元数据；云函数已用显式对象存储 adapter 适配 Node SDK `uploadFile({ cloudPath, fileContent })` 调用，dist smoke 会实际验证 adapter 不透传 `contentType`，并扫描云函数部署包避免 source map、浏览器 SDK、测试标记或 secret-like 字符串混入，构建产物安全扫描 6/6，通过移动端 E2E 8 passed / 1 real CloudBase manual skipped。
+最近证据已写回 Anvil 计划：50 个 Vitest 文件通过（446 passed），production build 通过，云函数 package test/typecheck/build/smoke 通过并生成 `dist/package.json` ESM + `@cloudbase/node-sdk` 元数据；云函数已用显式对象存储 adapter 适配 Node SDK `uploadFile({ cloudPath, fileContent })` 调用，dist smoke 会实际验证 adapter 不透传 `contentType`，并扫描云函数部署包避免 source map、浏览器 SDK、测试标记或 secret-like 字符串混入，构建产物安全扫描 6/6，通过移动端 E2E 8 passed / 1 real CloudBase manual skipped。
 
 ## 技术栈
 
@@ -67,6 +68,8 @@ pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium 
 - 环境变量样例：`.env.example`
 
 真实 smoke 必须在隔离 CloudBase 环境、真实测试邮箱、服务端 `PHOTO_MEAL_*` 模型配置和中国大陆网络设备准备后执行。执行摘要不得记录真实邮箱、验证码、session、token、照片对象 key 或模型响应原文。
+
+真实环境变量配置完成后，先运行 `pnpm preflight:cloudbase-manual`。该命令只输出变量名和检查结果，不输出实际 key、endpoint 或 secret。
 
 ## 安全原则
 
