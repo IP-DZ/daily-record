@@ -120,6 +120,32 @@ describe('deployment and build artifact safety', () => {
     expect(manualSmokeTemplate).not.toContain('cloud://');
   });
 
+  it('keeps GitHub CI aligned with the local release gates that can run without real CloudBase secrets', () => {
+    const ciWorkflow = readProjectFile('.github/workflows/ci.yml');
+
+    for (const requiredTerm of [
+      'pnpm/action-setup',
+      'actions/setup-node',
+      'pnpm lint',
+      'pnpm typecheck',
+      'pnpm test:cloud-functions',
+      'pnpm typecheck:cloud-functions',
+      'pnpm test',
+      'pnpm build',
+      'pnpm build:cloud-functions',
+      'pnpm smoke:cloud-functions',
+      'pnpm vitest run tests/security/buildArtifactSafety.test.ts',
+      'pnpm exec playwright install --with-deps chromium',
+      'pnpm test:e2e --project=mobile-chromium --reporter=line',
+    ]) {
+      expect(ciWorkflow).toContain(requiredTerm);
+    }
+    expect(ciWorkflow).toContain('push');
+    expect(ciWorkflow).toContain('pull_request');
+    expect(ciWorkflow).not.toContain('preflight:cloudbase-manual');
+    expect(ciWorkflow).not.toContain('PHOTO_MEAL_MODEL_API_KEY');
+  });
+
   it('keeps the meal photo cloud function as a buildable deployment package', () => {
     const workspace = readProjectFile('pnpm-workspace.yaml');
     const rootPackage = readJsonProjectFile<{ scripts?: Record<string, unknown> }>('package.json');
