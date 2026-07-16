@@ -8,7 +8,7 @@ import {
 import type { SettingsRepository } from './SettingsRepository';
 import type { OnboardingDraft, OnboardingDraftInput } from './onboardingTypes';
 
-const DRAFT_STORAGE_KEY = 'daily-record:onboarding-draft:v1';
+const DRAFT_STORAGE_PREFIX = 'daily-record:onboarding-draft:v2:';
 const TARGET_TOLERANCE = 1e-6;
 
 const nutritionTargetsSchema = z
@@ -38,11 +38,25 @@ function targetsMatch(expected: NutritionTargets, actual: NutritionTargets) {
   );
 }
 
+export type DraftStorageIdentity =
+  | { kind: 'guest' }
+  | { kind: 'user'; userId: string };
+
+function storageKeyFor(identity: DraftStorageIdentity): string {
+  if (identity.kind === 'guest') return `${DRAFT_STORAGE_PREFIX}guest`;
+  return `${DRAFT_STORAGE_PREFIX}user:${encodeURIComponent(identity.userId)}`;
+}
+
 export class BrowserDraftSettingsRepository implements SettingsRepository {
   constructor(
     private readonly storage: Storage,
     private readonly now: () => Date,
-  ) {}
+    identity: DraftStorageIdentity = { kind: 'guest' },
+  ) {
+    this.storageKey = storageKeyFor(identity);
+  }
+
+  private readonly storageKey: string;
 
   async saveDraft(draft: OnboardingDraftInput): Promise<void> {
     const persistedDraft: OnboardingDraft = {
@@ -50,18 +64,18 @@ export class BrowserDraftSettingsRepository implements SettingsRepository {
       savedAt: this.now().toISOString(),
     };
 
-    this.storage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(persistedDraft));
+    this.storage.setItem(this.storageKey, JSON.stringify(persistedDraft));
   }
 
   async loadDraft(): Promise<OnboardingDraft | null> {
-    const rawDraft = this.storage.getItem(DRAFT_STORAGE_KEY);
+    const rawDraft = this.storage.getItem(this.storageKey);
     if (rawDraft === null) return null;
 
     let decodedDraft: unknown;
     try {
       decodedDraft = JSON.parse(rawDraft);
     } catch {
-      this.storage.removeItem(DRAFT_STORAGE_KEY);
+      this.storage.removeItem(this.storageKey);
       return null;
     }
 
@@ -70,7 +84,7 @@ export class BrowserDraftSettingsRepository implements SettingsRepository {
       !parsedDraft.success ||
       !targetsMatch(calculateNutritionTargets(parsedDraft.data.inputs), parsedDraft.data.targets)
     ) {
-      this.storage.removeItem(DRAFT_STORAGE_KEY);
+      this.storage.removeItem(this.storageKey);
       return null;
     }
 
@@ -78,6 +92,6 @@ export class BrowserDraftSettingsRepository implements SettingsRepository {
   }
 
   async clearDraft(): Promise<void> {
-    this.storage.removeItem(DRAFT_STORAGE_KEY);
+    this.storage.removeItem(this.storageKey);
   }
 }

@@ -1,0 +1,47 @@
+.photo-meal-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.photo-meal-header,
+.photo-meal-panel,
+.photo-meal-results article {
+  border: 1px solid #d9dfd6;
+  border-radius: 20px;
+  background: #fffaf1;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.photo-meal-eyebrow {
+  color: #4b7a5d;
+  font-weight: 700;
+}
+
+.photo-meal-panel label,
+.photo-meal-results label {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.photo-meal-panel input,
+.photo-meal-results input {
+  min-height: 40px;
+  border: 1px solid #cbd5c4;
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.photo-meal-nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.photo-meal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}

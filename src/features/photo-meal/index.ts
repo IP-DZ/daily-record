@@ -1,0 +1,1 @@
+export { PhotoMealPage } from './PhotoMealPage';

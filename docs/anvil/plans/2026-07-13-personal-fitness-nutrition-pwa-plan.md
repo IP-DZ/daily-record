@@ -5,12 +5,24 @@
 - **Status**：active
 - **Workflow Stage**：plan
 - **Created**：2026-07-13
-- **Updated**：2026-07-13
+- **Updated**：2026-07-16
 - **Source Of Truth Until**：本计划被执行完毕、被新版计划取代或被明确放弃
 - **Requirements Source**：`docs/anvil/brainstorms/2026-07-13-personal-fitness-nutrition-pwa.md`（用户已于 2026-07-13 确认）
 - **Compounded Knowledge**：not yet compounded
-- **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
-- **Resume Point**：任务 1 已通过整分支 Anvil 终审并纳入首个保护性提交；下一步从任务 2 开始
+- **Readiness Path**：`pnpm lint && pnpm typecheck && pnpm test:cloud-functions && pnpm typecheck:cloud-functions && pnpm test && pnpm build && pnpm build:cloud-functions && pnpm smoke:cloud-functions && pnpm preflight:cloudbase-manual && pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md && pnpm validate:cloudbase-rpc-docs && pnpm validate:cloudbase-env-docs && pnpm validate:cloudbase-table-docs && pnpm vitest run tests/security/buildArtifactSafety.test.ts && pnpm test:e2e`
+- **Resume Point**：任务 4「体重记录与热量反馈」、任务 5「训练记录、复制与容量」、任务 6「图片分析、人工确认与失败恢复」、任务 7「营养趋势」、任务 8「综合趋势」和任务 9「离线草稿、隐私删除、系统 E2E 与部署」均已完成本地自动化、移动端 E2E、Anvil 审阅、状态回写、保护性提交和 GitHub 推送；README 交付入口也已在 `78c79981 docs: update project handoff readme` 更新并推送。2026-07-16 续作补齐了任务 6 的真实云函数本地缺口：`mealPhotoAnalysis` 云函数部署入口、服务端 `http-json`/OpenAI-compatible 视觉模型 provider、私有对象存储适配、auth-bound RPC 数据库网关、按用户/日期计数 RPC 和部署文档中的服务端 `PHOTO_MEAL_*` 变量。随后补全 `docs/operations/cloudbase-test-environment.md`，将真实环境验收范围从早期 profile/goal 扩展到全业务表、全部 auth-bound RPC、`mealPhotoAnalysis` 云函数、模型 secret、账号数据删除和中国大陆网络 smoke，并用 `tests/security/buildArtifactSafety.test.ts` 防退化。最新续作补齐了云函数可部署包和 Node SDK 适配边界：`cloud/functions/*` 纳入 pnpm workspace，`meal-photo-analysis` 提供 `test`/`typecheck`/`build`/`smoke` 脚本、`tsconfig.json`、Vite library build、`dist/index.js`、`dist/package.json` ESM 元数据和 `@cloudbase/node-sdk` 服务端依赖、可部署 `main` 入口、Node SDK 懒加载兼容、显式对象存储 adapter（只向 Node SDK `uploadFile` 传 `cloudPath` 和 `fileContent`）和 `CLOUDBASE_*` 初始化变量说明，根目录新增 `pnpm test:cloud-functions` / `pnpm typecheck:cloud-functions` / `pnpm build:cloud-functions` / `pnpm smoke:cloud-functions` / `pnpm preflight:cloudbase-manual` 门禁；smoke 已独立成 `scripts/smoke-dist.mjs`，会实际导入 dist、验证 `dist/package.json`、验证对象存储 adapter 不透传 `contentType`、扫描云函数部署包不含 source map、浏览器 SDK、`window`/`document`、测试平台标记或 secret-like 字符串、调用 dist `main` 并确认未认证请求稳定停在 `unauthenticated`；manual preflight 会检查真实 CloudBase/模型环境变量齐全、地域和模型参数合法且不输出实际 key/endpoint/secret；真实 smoke 脱敏结果模板已补到 `docs/operations/manual-smoke-result-template.md` 并从 README、部署文档和 CloudBase 隔离环境文档链接，防止验收记录泄露真实邮箱、验证码、session、token、照片对象 key、签名 URL、模型响应原文或 secret；`.github/workflows/ci.yml` 已补齐 push / pull request 自动门禁，覆盖 lint、typecheck、云函数 test/typecheck/build/smoke、单元与安全测试、production build、产物扫描和 test-platform 移动端 E2E，且不注入真实 CloudBase/model secret；Node 运行边界已按真实 CI 结果统一为 `^20.19.0 || >=22.13.0`，README、本地开发文档、`package.json` 和 CI 防退化测试保持一致；Draft PR 已创建为 https://github.com/IP-DZ/daily-record/pull/2，作为 review/merge 入口。最新证据：ESLint passed；root typecheck passed；cloud function package test/typecheck/build/smoke passed；manual preflight tests passed；production build passed；50 files / 448 Vitest tests passed；build artifact safety 8/8；`mobile-chromium` E2E 8 passed / 1 real CloudBase manual skipped；GitHub Actions CI passed；`git diff --check` passed。任务 9 的细化执行来源为 `docs/anvil/plans/2026-07-15-system-hardening-deployment-plan.md`，已交付离线草稿恢复、隐私设置/清空应用数据、PWA/部署运维加固、生产构建产物安全扫描和完整移动端系统 E2E。真实 CloudBase、真实视觉模型和中国大陆网络 smoke 仍保持环境 blocker，owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md`、`docs/operations/deployment.md` 和 `docs/operations/manual-smoke-result-template.md` 配置隔离环境、云函数服务端 `PHOTO_MEAL_*` secret、测试图片策略、测试邮箱和大陆网络设备后运行 preflight、manual/smoke 并记录脱敏摘要。
+- **2026-07-16 续作证据**：manual preflight 继续加固，新增 RED/GREEN 回归覆盖公开 `VITE_CLOUDBASE_*` 与云函数 `CLOUDBASE_*` 环境 ID/地域不一致时必须失败，防止前端静态托管和 `mealPhotoAnalysis` 云函数误指向不同隔离环境；同时保留服务端 secret 被误放进 `VITE_*` 时失败且不输出真实 secret 的检查。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/cloudbaseManualPreflight.test.ts`，5 tests passed。
+- **2026-07-16 续作证据**：新增 `pnpm validate:manual-smoke-result path/to/manual-smoke-result.md` 脱敏校验，提交或分享真实 CloudBase smoke 结果前自动拦截真实邮箱、验证码、session/JWT、CloudBase 对象路径、签名 URL 和 secret-like 值；输出只包含问题类型和行号，不回显敏感原文。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/manualSmokeResultValidator.test.ts`，3 tests passed。
+- **2026-07-16 续作证据**：`validate:manual-smoke-result` 继续加固，新增 RED/GREEN 回归覆盖公网 IP 与 CloudBase 环境 ID 泄露，防止大陆网络 smoke 记录把网络地址或隔离环境标识写入仓库/PR/截图说明。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/manualSmokeResultValidator.test.ts`，3 tests passed。
+- **2026-07-16 续作证据**：`.github/workflows/ci.yml` 将 `pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md` 纳入不需要真实 CloudBase secret 的自动 release gate；Readiness Path、README 和部署文档同步该门禁，`tests/security/buildArtifactSafety.test.ts` 防退化覆盖 CI 命令。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts`。
+- **2026-07-16 续作证据**：新增 `pnpm validate:cloudbase-rpc-docs`，从 `cloud/database/migrations/*.sql` 提取 `CREATE FUNCTION public.*` 并确认全部 RPC 名称已列入 `docs/operations/cloudbase-test-environment.md` 的真实 CloudBase 隔离环境 smoke 检查；该门禁已加入 CI、Readiness Path、README 和部署文档，避免新增/调整 RPC 后环境验收清单漂移。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/cloudbaseRpcDocs.test.ts`，1 test passed。
+- **2026-07-16 续作证据**：新增 `pnpm validate:cloudbase-env-docs`，从 `scripts/cloudbase-manual-preflight.mjs` 提取真实 preflight 会检查/输出的 `VITE_CLOUDBASE_*`、`CLOUDBASE_*` 和 `PHOTO_MEAL_*` 变量，并确认部署文档与 CloudBase 隔离环境文档逐项覆盖；初始 RED 发现 `docs/operations/deployment.md` 没有逐名列出 `VITE_CLOUDBASE_ENV_ID`、`VITE_CLOUDBASE_PUBLISHABLE_KEY`、`VITE_CLOUDBASE_REGION`，已补齐。该门禁已加入 CI、Readiness Path、README 和部署文档。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/cloudbaseEnvDocs.test.ts`，1 test passed。
+- **2026-07-16 续作证据**：新增 `pnpm validate:cloudbase-table-docs`，从 `cloud/database/migrations/*.sql` 提取 `CREATE TABLE public.*` 并确认全部用户数据表已列入 `docs/operations/cloudbase-test-environment.md` 的真实 CloudBase 隔离环境 smoke 检查；该门禁已加入 CI、Readiness Path、README 和部署文档，避免新增/调整表结构后 RLS、删除和跨账号验收清单漂移。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/cloudbaseTableDocs.test.ts`，1 test passed。
+- **2026-07-16 续作证据**：`validate:manual-smoke-result` 继续加固，除脱敏检查外新增真实 smoke 关键清单覆盖检查，要求验收记录包含 preflight、A/B OTP 与跨设备、业务数据隔离、`mealPhotoAnalysis`、图片确认前后汇总、每日限流、清空应用数据、中国大陆网络、PWA、离线和 service worker 私有资源缓存检查；初始 RED 证明旧 validator 会放过“章节齐但关键检查缺失”的记录。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/manualSmokeResultValidator.test.ts`，4 tests passed。
+- **2026-07-16 续作证据**：`validate:manual-smoke-result` 再次加固，关键真实 smoke 检查项不仅必须存在，还必须在同一行填写 `pass`、`fail` 或 `blocked` 状态，避免验收记录保留空项仍被接受；初始 RED 证明旧 validator 会放过“检查项存在但状态为空”的记录。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/manualSmokeResultValidator.test.ts`，5 tests passed；`pnpm_config_verify_deps_before_run=warn pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md` passed。
+- **2026-07-16 续作证据**：`validate:manual-smoke-result --release-ready path/to/manual-smoke-result.md` 新增发布就绪模式，保留普通模式可记录 `fail`/`blocked` 的脱敏 smoke 结果，同时要求取消 Draft / 正式发布前全部关键 smoke 项为 `pass` 且“是否可发布”为 `yes`；初始 RED 证明旧脚本会把 `--release-ready` 当作文件名且无法区分“可记录”和“可发布”，追加 RED 证明 `pass / fail / blocked` 模板占位符不能被发布就绪模式误判为通过。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/manualSmokeResultValidator.test.ts`，8 tests passed。
+- **2026-07-16 续作证据**：修复 push CI 暴露的 `src/app/App.test.tsx` 偶发竞态：`renders the nutrition trends page after auth restores` 会在页面标题出现后立即断言 `nutritionGoals.listByDateRange`，但该调用来自页面 effect，和标题渲染不是同一完成点；改为 `waitFor` 等 repository 调用，避免同提交 PR CI 通过而 push CI 偶发失败。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/app/App.test.tsx --testNamePattern "renders the nutrition trends page after auth restores"` passed；`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/app/App.test.tsx`，23 tests passed；`pnpm_config_verify_deps_before_run=warn pnpm test`，54 files / 461 tests passed。
+- **2026-07-16 续作证据**：真实 smoke 脱敏模板补充 `--release-ready` 发布前校验说明，并用 `tests/security/buildArtifactSafety.test.ts` 防退化，确保验收记录模板本身不会只提醒普通脱敏校验而遗漏取消 Draft / 正式发布前的全 pass 门禁。验证：`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts`，8 tests passed；`pnpm_config_verify_deps_before_run=warn pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md` passed。
 
 ## 交付拆分
 
@@ -45,7 +57,7 @@
 - **职责**：定义认证、数据库、存储、AI、时钟、请求 ID 与日志端口，并提供 CloudBase/测试实现。
 - **输入**：领域命令和当前会话。
 - **输出**：领域 DTO 或标准化错误。
-- **依赖**：CloudBase SDK 只允许出现在 `src/platform/cloudbase`。
+- **依赖**：浏览器 `@cloudbase/js-sdk` 只允许出现在 `src/platform/cloudbase`；服务端 `@cloudbase/node-sdk` 只允许出现在 `cloud/functions/*`。
 - **不变量**：浏览器包不包含管理密钥；所有用户数据操作由会话用户约束。
 
 ### 模块：功能切片 `src/features/*`
@@ -261,21 +273,30 @@ graph TD
 - **执行指令**：执行 `docs/superpowers/plans/2026-07-13-foundation-nutrition-onboarding.md`，完成后更新本文任务状态。
 
 ### 任务 2：CloudBase 账号、数据 schema 与隔离
+- **Code Status**：partial（本地合约、认证、RLS、按用户本地草稿、资料同步与移动 E2E 已实现；真实 CloudBase OTP/双会话/跨设备 smoke 因隔离环境缺失而 blocked）
+- **Actual Write Set**：`packages/contracts/**`、`src/platform/auth/**`、`src/platform/cloudbase/**`、`src/platform/settings/**`、`src/platform/testing/**`、`src/features/auth/**`、`src/features/onboarding/**`、`src/app/**`、`cloud/database/**`、`tests/security/**`、`tests/e2e/auth*.spec.ts`、`tests/e2e/cloudbase-auth.manual.spec.ts`、`playwright.config.ts`、`.env.example`、workspace/依赖配置、`docs/operations/cloudbase-test-environment.md`与本状态段
+- **Verification**：`CI=true pnpm lint && CI=true pnpm typecheck && CI=true pnpm test && CI=true pnpm build && CI=true pnpm test:e2e -- --project=mobile-chromium`；生产产物扫描服务端密钥标识、固定测试 OTP、测试邮箱与 token；初始 JS gzip 预算 ≤ 250 KB
+- **Evidence**：终审安全修复后 ESLint、`tsc -b`、17 files / 237 Vitest tests、production PWA build 与 `git diff --check` 通过；focused PGlite 权限套件 44/44 通过；初始 JS gzip 100.87 KB。2026-07-14 最新 `mobile-chromium` 证据为 2 passed / 1 manual skipped，自动覆盖原 onboarding 回归以及内存平台的 OTP、会话恢复、A/B 切换、跨 BrowserContext 目标加载与退出。Task 5 首轮复审发现的 `rdb()` 工厂调用、guest/user key 碰撞、退出清理阻塞/静默失败、manual artifact 与 single-context 缺口均已修复。整分支终审随后发现 `authenticated` 仍有直接表 DML、invoker RPC 校验弱于共享合约及 Playwright 产物未忽略；新增失败测试复现 28 项权限/校验缺口后，迁移改为无直接表权限、仅 auth EXECUTE 的固定路径 definer RPC，显式用 `auth.uid()` 写入/读取，完整严格校验对象键、类型、枚举、整数、范围和非负目标。复审进一步用六个原始 `1e309` JSON 回归复现 PostgreSQL 可保存但 JavaScript 加载为 Infinity 的差异，现六项目标均限制为不超过 `Number.MAX_VALUE`，并验证该精确边界仍被接受。生产产物无服务端密钥标识、固定测试 OTP、测试邮箱、测试端点或 test-platform chunk。真实 manual spec 已显式关闭 trace/screenshot/video 并编排 A/B/A 三个 BrowserContext，但本轮因缺少隔离环境而只验证可发现性、未执行交互登录；blocker owner=仓库所有者，next=按 `docs/operations/cloudbase-test-environment.md` 配置隔离环境并运行 manual spec。
 - **Layer**：2
 - **Parallel Group**：G2
 - **Execution**：serial
 - **Parallel Blocker**：共享认证接口、迁移、RLS、环境配置
-- **Ownership**：`src/platform/**`、`src/features/auth/**`、`packages/contracts/**`、`cloud/database/**`、`cloud/functions/auth/**`、`tests/security/**`
-- **Read Set**：任务 1 公共接口、CloudBase 当前环境配置
+- **Ownership**：`src/platform/**`、`src/features/auth/**`、任务 2 必需的 `src/features/onboarding/**` 与 `src/app/**` 集成点、`packages/contracts/**`、`cloud/database/**`、`cloud/functions/auth/**`、`tests/security/**`、`tests/e2e/auth*.spec.ts`、根 workspace/依赖/测试配置、`.env.example`、`docs/operations/cloudbase-test-environment.md`、任务 2 细化计划与本文状态段
+- **Read Set**：任务 1 公共接口、已确认需求、CloudBase v3 邮箱 OTP / 会话 / PostgreSQL / RLS 官方文档、当前环境配置
 - **Write Set**：同 Ownership
 - **描述**：打通邮箱验证码、会话恢复、资料与目标版本同步，建立全表用户隔离策略。
 - **成功标准**：两个测试账号互不可读写；登录/退出/跨设备目标同步 E2E 通过；浏览器构建扫描不到服务端密钥。
 - **预估 Token**：220k
 - **依赖**：任务 1
-- **涉及文件**：认证 feature、CloudBase 适配器、合约、迁移和权限测试。
-- **执行指令**：先写端口合约测试，再写迁移/RLS，最后接 UI；真实验证码仅在隔离测试环境验证。
+- **涉及文件**：认证 feature、CloudBase 适配器、共享合约、迁移/RLS/RPC、权限测试、App/onboarding 集成、移动 E2E 与隔离环境运维说明。
+- **执行指令**：执行 `docs/superpowers/plans/2026-07-13-cloudbase-auth-isolation.md`；先写失败的端口合约测试，再写迁移/RLS，最后接 UI 与同步；真实验证码仅在隔离测试环境验证。
+- **阶段证据**：合约、CloudBase 适配器、PGlite RLS、认证 UI 与资料同步/E2E 五个详细子任务均通过独立评审；安全修复后整分支为 237 个 Vitest 测试；2026-07-14 最新移动 E2E 为 2 个通过 / 1 个真实环境手工 spec 跳过。真实邮箱 OTP、CloudBase 双连接并发 smoke 因尚未配置隔离环境而未声明通过。
 
 ### 任务 3：今日页与手动饮食闭环
+- **Code Status**：done（合约、领域汇总、仓储端口、CloudBase RPC adapter、`meals` 生产迁移/RLS/RPC、今日页 UI、路由接入和移动端手动记餐 E2E 已实现；真实 CloudBase 环境 smoke 仍随任务 2 blocker 保持 blocked）
+- **Actual Write Set**：`packages/contracts/src/meals.ts`、`packages/contracts/src/index.ts`、`src/domain/meals/**`、`src/platform/meals/**`、`src/platform/cloudbase/CloudBaseMealsRepository.*`、`src/platform/cloudbase/createCloudBasePlatform.ts`、`src/platform/cloudbase/index.ts`、`src/platform/testing/createTestPlatform.*`、`cloud/database/migrations/0002_meals.sql`、`tests/security/mealIsolation.test.ts`、`tests/security/migrationShape.test.ts`、`tests/security/pgliteAuthHarness.ts`、`src/features/today/**`、`src/app/App.tsx`、`src/app/App.test.tsx`、`tests/e2e/manual-meals.spec.ts`、Task 3 细化计划、审阅报告与本状态段
+- **Verification**：focused contracts/domain tests、repository adapter tests、PGlite isolation tests、Today/App component tests、`mobile-chromium` E2E、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`git diff --check`
+- **Evidence**：Task 1 contracts/domain：2 files / 36 tests passed，typecheck passed，审阅 PASS；Task 2 meal repositories：2 files / 9 focused tests passed，createCloudBasePlatform tests passed，typecheck passed，审阅 PASS（仅记录 `meals` 非枚举兼容性 Minor）；Task 3 migration/isolation：2 files / 22 tests passed，适配器 RPC 参数修复后复审 PASS；Task 4 Today UI：2 files / 16 tests passed，lint/typecheck/diff check passed，初审发现编辑中切换日期可能保存到错误日期，新增 RED 回归并在日期变化时 `resetForm()` 后复审 PASS；Task 5 mobile E2E：`mobile-chromium` 3 passed / 1 real CloudBase manual skipped，覆盖 `/today?test-platform=1` 登录、新增鸡胸饭、四项合计精确展示、删除回零和空状态。
 - **Layer**：3
 - **Parallel Group**：G3A
 - **Execution**：serial
@@ -291,6 +312,10 @@ graph TD
 - **执行指令**：先以失败的汇总/事务测试锁定行为，再实现最小 UI 与后端。
 
 ### 任务 4：体重记录与热量反馈
+- **Code Status**：done（体重/训练细化计划 Task 1–4 已完成共享合约、纯领域反馈、仓储端口、CloudBase adapter、生产迁移/RLS/RPC、体重 UI、`/weight` 鉴权路由和组件测试；真实 CloudBase smoke 仍随任务 2 blocker 保持 blocked）
+- **Actual Write Set**：`packages/contracts/src/weight.ts`、`packages/contracts/src/workouts.ts`、`packages/contracts/src/index.ts`、`src/domain/weight/**`、`src/domain/workouts/**`、`src/platform/weight/**`、`src/platform/workouts/**`、`src/platform/cloudbase/CloudBaseWeightRepository.*`、`src/platform/cloudbase/CloudBaseWorkoutsRepository.*`、`src/platform/cloudbase/createCloudBasePlatform.ts`、`src/platform/cloudbase/index.ts`、`src/platform/testing/createTestPlatform.*`、`cloud/database/migrations/0003_weight_workouts.sql`、`tests/security/weightWorkoutIsolation.test.ts`、`tests/security/migrationShape.test.ts`、`tests/security/pgliteAuthHarness.ts`、`src/features/weight/**`、`src/app/App.tsx`、`src/app/App.test.tsx`、体重/训练细化计划与审阅报告
+- **Verification**：contracts/domain focused tests、repository adapter tests、PGlite isolation tests、Weight/App component tests、`pnpm lint`、`pnpm typecheck`、`git diff --check`
+- **Evidence**：Task 1 contracts/domain：3 files / 27 tests passed，typecheck passed；Task 2 repositories/adapters：3 files / 15 tests passed，typecheck passed；Task 3 migration/isolation：2 files / 19 tests passed，适配器 RPC 参数修复后 lint/typecheck/diff check passed，审阅 PASS；Task 4 Weight UI：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/features/weight/WeightPage.test.tsx src/app/App.test.tsx` 为 2 files / 18 tests passed，`pnpm typecheck`、`pnpm lint`、`git diff --check` 均 passed，审阅见 `.ai/anvil/reviews/2026-07-14-weight-page-review.md`。
 - **Layer**：3
 - **Parallel Group**：G3B
 - **Execution**：parallel
@@ -306,6 +331,10 @@ graph TD
 - **执行指令**：固定日期/时区测试，禁止使用系统隐式当前时间。
 
 ### 任务 5：训练记录、复制与容量
+- **Code Status**：done（体重/训练细化计划 Task 1–3 共享基础已完成；Task 5 已完成训练 UI、`/workouts` 鉴权路由、复制上次训练、completed-set volume 展示和组件/App 测试；Task 6 移动 E2E 已新增并通过；真实 CloudBase smoke 仍随任务 2 blocker 保持 blocked）
+- **Actual Write Set**：`packages/contracts/src/workouts.ts`、`packages/contracts/src/index.ts`、`src/domain/workouts/**`、`src/platform/workouts/**`、`src/platform/cloudbase/CloudBaseWorkoutsRepository.*`、`src/platform/cloudbase/createCloudBasePlatform.ts`、`src/platform/cloudbase/index.ts`、`src/platform/testing/createTestPlatform.*`、`cloud/database/migrations/0003_weight_workouts.sql`、`tests/security/weightWorkoutIsolation.test.ts`、`tests/security/migrationShape.test.ts`、`tests/security/pgliteAuthHarness.ts`、`src/features/workouts/**`、`src/app/App.tsx`、`src/app/App.test.tsx`、`tests/e2e/weight-workouts.spec.ts`、体重/训练细化计划与审阅报告
+- **Verification**：contracts/domain focused tests、repository adapter tests、PGlite isolation tests、Workouts/App component tests、`mobile-chromium` E2E、`pnpm lint`、`pnpm typecheck`、`git diff --check`
+- **Evidence**：Task 1–3 共享合约、仓储和迁移证据同任务 4；Task 5 Workouts UI：`pnpm_config_verify_deps_before_run=warn pnpm vitest run src/features/workouts/WorkoutsPage.test.tsx src/app/App.test.tsx` 为 2 files / 19 tests passed，`pnpm typecheck`、`pnpm lint`、`git diff --check` 均 passed，审阅见 `.ai/anvil/reviews/2026-07-14-workouts-page-review.md`；Task 6 mobile E2E：授权重跑 `pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line tests/e2e/weight-workouts.spec.ts` 为 1 passed，覆盖 `/weight?test-platform=1` 登录、保存 70.4 kg 晨重、反馈空数据文案、`/workouts?test-platform=1` 保存卧推 60×8、训练容量 480 kg、复制到 `2026-07-15` 后两条训练。
 - **Layer**：3
 - **Parallel Group**：G3B
 - **Execution**：parallel
@@ -321,6 +350,24 @@ graph TD
 - **执行指令**：以容量与复制纯函数测试开工，再接事务与表单。
 
 ### 任务 6：图片分析、人工确认与失败恢复
+- **Code Status**：done（细化计划 `2026-07-14-photo-meal-analysis-plan.md` Task 1–6 已完成并通过最终审阅；真实 CloudBase/视觉模型 smoke 因隔离环境和模型配置缺失保持 blocked）
+- **Actual Write Set**：
+  - `packages/contracts/src/photoMeal.ts`、`packages/contracts/src/photoMeal.test.ts`、`packages/contracts/src/index.ts`
+  - `src/domain/photoMeal/**`
+  - `src/platform/image/**`
+  - `src/platform/photoMeal/**`
+  - `src/platform/cloudbase/CloudBasePhotoMealAnalysisRepository.*`、`src/platform/cloudbase/createCloudBasePlatform.*`、`src/platform/cloudbase/index.ts`
+  - `src/platform/testing/createTestPlatform.*`
+  - `cloud/database/migrations/0004_photo_meal_analysis.sql`
+  - `cloud/functions/meal-photo-analysis/**`
+  - `tests/security/photoMealAnalysisIsolation.test.ts`、`tests/security/migrationShape.test.ts`、`tests/security/pgliteAuthHarness.ts`
+  - `src/features/photo-meal/**`
+  - `src/app/App.tsx`、`src/app/App.test.tsx`
+  - `tests/e2e/photo-meal.spec.ts`
+  - `docs/anvil/plans/2026-07-14-photo-meal-analysis-plan.md`
+  - `.ai/anvil/reviews/2026-07-14-photo-meal-*-review.md`
+- **Verification**：focused contracts/domain、image preprocessing、platform adapters、PGlite isolation/handler、PhotoMeal/App component tests、focused `photo-meal.spec.ts` mobile E2E、全量 `pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、全量 `pnpm test:e2e --project=mobile-chromium --reporter=line`、`git diff --check`
+- **Evidence**：Task 1 contracts/domain：2 files / 20 tests passed，typecheck/lint/diff check passed，审阅 PASS；Task 2 image preprocessing：1 file / 6 tests passed，typecheck/lint/diff check passed，审阅 PASS；Task 3 platform adapters：3 files / 15 tests passed，typecheck/lint/diff check passed，审阅 PASS；Task 4 migration/RLS/RPC/handler：3 files / 13 tests passed，typecheck/lint/diff check passed，审阅 PASS；Task 5 UI/App route：2 files / 20 tests passed，typecheck/lint/diff check passed，审阅 PASS；Task 6 mobile E2E/status/final review：focused `photo-meal.spec.ts` 1 passed，全量 lint/typecheck/unit/build 通过，36 files / 378 Vitest tests passed，全量 `mobile-chromium` E2E 5 passed / 1 real CloudBase manual skipped，最终审阅 `.ai/anvil/reviews/2026-07-14-photo-meal-analysis-final-review.md` 批准。真实 CloudBase/视觉模型 manual smoke 未声明通过，blocker owner=仓库所有者，next=配置隔离 CloudBase 环境、服务端模型变量和测试图片策略后运行 manual spec。
 - **Layer**：4
 - **Parallel Group**：G4A
 - **Execution**：serial
@@ -336,6 +383,8 @@ graph TD
 - **执行指令**：模型测试使用固定夹具；真实模型仅做受控 smoke，不进入常规测试。
 
 ### 任务 7：营养趋势
+- **Code Status**：done（细化计划 `2026-07-14-nutrition-trends-plan.md` Task 1–4 已完成并通过最终审阅；真实 CloudBase smoke 仍随任务 2 blocker 保持 blocked）
+- **Planning Note**：主计划原先写“只读取已稳定餐次接口”，但成功标准要求跨目标版本按日期取正确目标；细化计划补入目标历史读模型、迁移/RPC 和平台端口作为串行前置。
 - **Layer**：4
 - **Parallel Group**：G4B
 - **Execution**：parallel
@@ -345,12 +394,15 @@ graph TD
 - **Write Set**：同 Ownership
 - **描述**：按日/周展示热量和三大营养素完成情况。
 - **成功标准**：跨目标版本时按日期取正确目标；空数据、部分周和完整周测试通过。
+- **Verification**：contracts/domain focused tests、platform/RPC/security focused tests、NutritionTrends/App component tests、focused nutrition trends mobile E2E、全量 `pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、全量 `pnpm test:e2e --project=mobile-chromium --reporter=line`、`git diff --check`
+- **Evidence**：Task 1 contracts/domain：2 files / 12 tests passed，typecheck/lint/diff check passed，审阅见 `.ai/anvil/reviews/2026-07-14-nutrition-trends-domain-review.md`；Task 2 platform/RPC/security：5 files / 22 tests passed，typecheck/lint/diff check passed，审阅见 `.ai/anvil/reviews/2026-07-14-nutrition-trends-platform-review.md`；Task 3 UI/App route：2 files / 22 tests passed，typecheck/lint/diff check passed，审阅见 `.ai/anvil/reviews/2026-07-15-nutrition-trends-ui-review.md`；Task 4 mobile E2E/final：focused `nutrition-trends.spec.ts` 1 passed，全量 lint/typecheck/unit/build 通过，41 files / 402 Vitest tests passed，全量 `mobile-chromium` E2E 6 passed / 1 real CloudBase manual skipped，最终审阅 `.ai/anvil/reviews/2026-07-15-nutrition-trends-final-review.md` 批准。真实 CloudBase manual smoke 未声明通过，blocker owner=仓库所有者，next=配置隔离 CloudBase 环境、服务端模型变量和测试图片策略后运行 manual spec。
 - **预估 Token**：100k
 - **依赖**：任务 3
 - **涉及文件**：营养趋势 feature 和纯聚合测试。
 - **执行指令**：优先表格/简洁图形，确保屏幕阅读器有等价文本。
 
 ### 任务 8：综合趋势
+- **Code Status**：done（细化计划 `2026-07-15-integrated-trends-plan.md` Task 1–3 已完成并通过最终审阅；真实 CloudBase smoke 仍随任务 2 blocker 保持 blocked）
 - **Layer**：5
 - **Parallel Group**：G5
 - **Execution**：serial
@@ -360,6 +412,8 @@ graph TD
 - **Write Set**：同 Ownership
 - **描述**：统一体重均线、营养完成率、动作重量/容量趋势。
 - **成功标准**：三个趋势入口在移动端可切换；图表与文本摘要数值一致；空状态可理解。
+- **Verification**：overview trends domain focused tests、Trends/App component tests、focused integrated trends mobile E2E、全量 `pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、全量 `pnpm test:e2e --project=mobile-chromium --reporter=line`、`git diff --check`
+- **Evidence**：Task 1 domain：1 file / 4 tests passed，typecheck/lint/diff check passed，审阅见 `.ai/anvil/reviews/2026-07-15-integrated-trends-domain-review.md`；Task 2 UI/App route：2 files / 23 tests passed，typecheck/lint/diff check passed，审阅见 `.ai/anvil/reviews/2026-07-15-integrated-trends-ui-review.md`；Task 3 mobile E2E/final：focused `trends.spec.ts` 1 passed，全量 lint/typecheck/unit/build 通过，43 files / 410 Vitest tests passed，全量 `mobile-chromium` E2E 7 passed / 1 real CloudBase manual skipped，最终审阅 `.ai/anvil/reviews/2026-07-15-integrated-trends-final-review.md` 批准。真实 CloudBase manual smoke 未声明通过，blocker owner=仓库所有者，next=配置隔离 CloudBase 环境、服务端模型变量和测试图片策略后运行 manual spec。
 - **预估 Token**：120k
 - **依赖**：任务 4、5、7
 - **涉及文件**：综合趋势 feature 与测试。
@@ -379,6 +433,10 @@ graph TD
 - **依赖**：任务 6、8
 - **涉及文件**：全局 PWA、离线、设置、删除、E2E、部署和文档。
 - **执行指令**：在非生产环境执行删除与真实 AI smoke；保留可复现证据和错误码，不保存敏感输入。
+- **Code Status**：done（细化计划 `2026-07-15-system-hardening-deployment-plan.md` Task 1–4 已完成并通过最终审阅；真实 CloudBase、真实视觉模型和中国大陆网络 smoke 因隔离环境、模型配置和实际网络设备缺失保持 blocked）
+- **Actual Write Set 摘要**：`src/platform/offline/**`、`src/features/{today,weight,workouts}/**` 离线草稿接入、`src/features/settings/**`、`src/platform/account/**`、`cloud/database/migrations/0006_account_deletion.sql`、`tests/security/{accountDeletionIsolation,buildArtifactSafety}.test.ts`、`tests/e2e/system.spec.ts`、`vite.config.ts`、`.env.example`、`docs/operations/**`、本计划和系统加固计划审阅证据。
+- **Verification**：`pnpm_config_verify_deps_before_run=warn pnpm lint` passed；`pnpm_config_verify_deps_before_run=warn pnpm typecheck` passed；`pnpm_config_verify_deps_before_run=warn pnpm test` passed，48 files / 431 passed / 1 skipped；`pnpm_config_verify_deps_before_run=warn pnpm build` passed；`pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArtifactSafety.test.ts` passed，4 tests；`pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line` passed，8 passed / 1 real CloudBase manual skipped；`git diff --check` passed。
+- **Evidence**：系统 E2E 覆盖登录设目标、今日页离线草稿恢复、餐食/体重/训练保存、综合趋势、设置页清空应用数据、清空后餐食/体重/训练不可读；生产 build 通过 `.build-mode` marker 和安全扫描证明正式 `dist` 不含固定测试验证码、测试邮箱、test-platform endpoint/client 或服务端密钥标识；PWA Workbox 无 runtimeCaching，并 denylist `/api/*` 与 `/__*` 导航回退；部署文档明确 CloudBase 静态托管、自托管、大陆网络 smoke、LCP/包体预算与真实 blocker。
 
 ## 会话拆分点
 
@@ -406,11 +464,11 @@ graph TD
 
 | 门禁 | Code Status | 证据 |
 |---|---|---|
-| 自动化测试 | passed | 74 个 Vitest 测试与修复后 1 个 `mobile-chromium` E2E 通过 |
-| 类型与静态检查 | passed | `pnpm lint`、`pnpm typecheck`、`git diff --check` 退出码 0 |
-| PWA 构建 | passed | `pnpm build` 生成 Manifest、Service Worker 与 Workbox；precache 12 entries |
-| 性能预算 | passed | 入口 JavaScript gzip 94.28 kB，低于 250 KB |
-| 敏感信息与缓存边界 | passed | 密钥模式扫描无命中；未配置 API/图片 runtime caching |
-| 任务级独立审查 | passed | 五个详细任务均为 Spec PASS / Quality APPROVED |
-| 整分支 Anvil 评审 | passed | `.ai/anvil/reviews/2026-07-13-onboarding-foundation-review.md` 已批准，无未解决发现项 |
-| 后续业务任务 | partial | 任务 2–9 仍待执行，当前恢复点为任务 2 |
+| 自动化测试 | passed | 48 files / 431 passed / 1 skipped Vitest tests；2026-07-15 最新 `mobile-chromium` 8 passed / 1 个真实环境 manual skipped |
+| 类型与静态检查 | passed | 全仓 ESLint、`tsc -b`、`git diff --check` 退出码 0 |
+| PWA 构建 | passed | production build 生成 Manifest、Service Worker 与 Workbox；正式 dist 不含 test-platform chunk；Vite 大 chunk 警告为非阻塞，未新增 SW runtime cache |
+| 性能预算 | partial | 本轮 production build 初始 `index` gzip 112.79 KB，CloudBase 动态 chunk gzip 181.15 KB；真实大陆网络 LCP 仍需设备和网络环境 smoke |
+| 敏感信息与缓存边界 | passed | 生产产物无服务端密钥值、固定测试 OTP/邮箱/端点/test-platform chunk；未新增用户 API runtime caching |
+| 任务级独立审查 | passed | 任务 2 的五个详细子任务、任务 3 的 Task 1–4、体重/训练 Task 1–6、图片分析 Task 1–6、营养趋势 Task 1–4、综合趋势 Task 1–3、系统加固 Task 1–4 最终均无未解决 Critical/Important |
+| 整分支 Anvil 评审 | passed | 任务 2 整分支评审已批准；任务 3 最终审阅 `.ai/anvil/reviews/2026-07-14-manual-meals-final-review.md` 批准；体重页/训练页/图片分析/营养趋势/综合趋势/系统加固最终审阅均批准，无未解决 Critical/Important |
+| 后续业务任务 | blocked-external | 本地首版实现和自动化验收完成；真实 CloudBase/视觉模型/中国大陆网络 smoke blocked，owner=仓库所有者，next=按运维文档配置真实隔离环境后执行 |

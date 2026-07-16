@@ -4,19 +4,30 @@
   "version": "0.1.0",
   "packageManager": "pnpm@11.7.0",
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": "^20.19.0 || >=22.13.0"
   },
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
+    "test:cloud-functions": "pnpm --filter meal-photo-analysis test",
+    "typecheck:cloud-functions": "pnpm --filter meal-photo-analysis typecheck",
+    "build:cloud-functions": "pnpm --filter meal-photo-analysis build",
+    "smoke:cloud-functions": "pnpm --filter meal-photo-analysis smoke",
+    "preflight:cloudbase-manual": "node scripts/cloudbase-manual-preflight.mjs",
+    "validate:manual-smoke-result": "node scripts/validate-manual-smoke-result.mjs",
+    "validate:cloudbase-rpc-docs": "node scripts/validate-cloudbase-rpc-docs.mjs",
+    "validate:cloudbase-env-docs": "node scripts/validate-cloudbase-env-docs.mjs",
+    "validate:cloudbase-table-docs": "node scripts/validate-cloudbase-table-docs.mjs",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@cloudbase/js-sdk": "3.6.2",
+    "@daily-record/contracts": "workspace:*",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
@@ -24,10 +35,12 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.4",
     "@eslint/js": "^10.0.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",

@@ -1,0 +1,6 @@
+packages:
+  - packages/*
+  - cloud/functions/*
+allowBuilds:
+  # This postinstall only prints a sponsorship banner; the SDK does not need it.
+  core-js-pure: false

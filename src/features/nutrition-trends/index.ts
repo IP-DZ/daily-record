@@ -1,0 +1,1 @@
+export { NutritionTrendsPage } from './NutritionTrendsPage';

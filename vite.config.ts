@@ -1,9 +1,48 @@
+import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
+import type { PluginOption } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { configDefaults, defineConfig } from 'vitest/config';
 
-export default defineConfig({
+function stripTestPlatformFromProduction(mode: string): PluginOption {
+  return {
+    name: 'strip-test-platform-from-production',
+    enforce: 'pre',
+    transform(code, id) {
+      if (mode === 'test' || !id.endsWith('/src/app/App.tsx')) return null;
+
+      return {
+        code: code.replace(
+          /function isTestPlatformRequested\(\): boolean \{[\s\S]*?\n\}\n\nfunction resolvePlatformLoader\(platformLoader: PlatformLoader\): PlatformLoader \{[\s\S]*?\n\}/,
+          `function isTestPlatformRequested(): boolean {
+  return false;
+}
+
+function resolvePlatformLoader(platformLoader: PlatformLoader): PlatformLoader {
+  return platformLoader;
+}`,
+        ),
+        map: null,
+      };
+    },
+  };
+}
+
+function writeBuildModeMarker(mode: string): PluginOption {
+  return {
+    name: 'write-build-mode-marker',
+    apply: 'build',
+    closeBundle() {
+      writeFileSync(resolve('dist/.build-mode'), mode);
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
   plugins: [
+    stripTestPlatformFromProduction(mode),
+    writeBuildModeMarker(mode),
     react(),
     VitePWA({
       registerType: 'prompt',
@@ -32,6 +71,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,webmanifest,txt}'],
+        navigateFallbackDenylist: [/^\/__/, /^\/api\//],
       },
     }),
   ],
@@ -40,4 +80,4 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, 'tests/e2e/**'],
     setupFiles: './src/test/setup.ts',
   },
-});
+}));

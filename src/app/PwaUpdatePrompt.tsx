@@ -61,6 +61,7 @@ export function PwaUpdatePrompt() {
     return (
       <aside aria-live="polite" style={promptStyle}>
         <strong>应用已可离线使用</strong>
+        <p>已缓存静态应用外壳，不会离线缓存你的餐食照片或账号接口。</p>
         <div style={actionsStyle}>
           <button
             type="button"

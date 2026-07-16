@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  automated-release-gates:
+    name: Automated release gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test cloud functions
+        run: pnpm test:cloud-functions
+
+      - name: Typecheck cloud functions
+        run: pnpm typecheck:cloud-functions
+
+      - name: Unit and security tests
+        run: pnpm test
+
+      - name: Build production PWA
+        run: pnpm build
+
+      - name: Build cloud functions
+        run: pnpm build:cloud-functions
+
+      - name: Smoke cloud function dist
+        run: pnpm smoke:cloud-functions
+
+      - name: Validate manual smoke result template
+        run: pnpm validate:manual-smoke-result docs/operations/manual-smoke-result-template.md
+
+      - name: Validate CloudBase RPC docs
+        run: pnpm validate:cloudbase-rpc-docs
+
+      - name: Validate CloudBase environment docs
+        run: pnpm validate:cloudbase-env-docs
+
+      - name: Validate CloudBase table docs
+        run: pnpm validate:cloudbase-table-docs
+
+      - name: Scan production build artifacts
+        run: pnpm vitest run tests/security/buildArtifactSafety.test.ts
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Mobile E2E
+        run: pnpm test:e2e --project=mobile-chromium --reporter=line

@@ -1,0 +1,20 @@
+{
+  "name": "meal-photo-analysis",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build --config vite.config.ts",
+    "smoke": "node scripts/smoke-dist.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@cloudbase/node-sdk": "3.18.3",
+    "@daily-record/contracts": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}
