@@ -77,7 +77,7 @@ PHOTO_MEAL_DAILY_LIMIT=20
 pnpm validate:manual-smoke-result path/to/manual-smoke-result.md
 ```
 
-该校验只输出问题类型和行号，不回显敏感原文。
+该校验会拦截真实邮箱、验证码、session/JWT、CloudBase 对象路径、签名 URL、secret-like 值、公网 IP 和 CloudBase 环境 ID；只输出问题类型和行号，不回显敏感原文。
 
 ## 性能预算
 

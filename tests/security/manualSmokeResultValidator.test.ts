@@ -97,6 +97,8 @@ describe('manual smoke result validator', () => {
       'cloud://env-id/users/raw-user-id/photo-meal/request-id/photo.webp',
       'https://storage.example.invalid/photo.webp?Signature=super-secret-signature',
       'sk-should-not-be-committed',
+      '203.0.113.42',
+      'daily-record-prod-8g12abcd',
     ];
     const result = runValidator(`${sanitizedSmokeResult}
 
@@ -107,6 +109,8 @@ describe('manual smoke result validator', () => {
 - 对象路径：${leakedValues[3]}
 - 签名 URL：${leakedValues[4]}
 - 模型 secret：${leakedValues[5]}
+- 公网 IP：${leakedValues[6]}
+- CloudBase 环境 ID：${leakedValues[7]}
 `);
     const output = `${result.stdout}\n${result.stderr}`;
 
@@ -118,6 +122,8 @@ describe('manual smoke result validator', () => {
       'cloud-object-path',
       'signed-url',
       'secret-like-value',
+      'public-ip',
+      'cloudbase-env-id',
     ]) {
       expect(result.stderr).toContain(issue);
     }

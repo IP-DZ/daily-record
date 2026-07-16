@@ -38,6 +38,14 @@ const sensitivePatterns = [
     issue: 'secret-like-value',
     pattern: /(?:sk-[A-Za-z0-9][A-Za-z0-9_-]{7,}|(?:SECRET|API_KEY|TOKEN)\s*=\s*[^\s]+)/i,
   },
+  {
+    issue: 'public-ip',
+    pattern: /\b(?!(?:10|127)\.)(?!(?:172\.(?:1[6-9]|2\d|3[0-1]))\.)(?!(?:192\.168)\.)(?:\d{1,3}\.){3}\d{1,3}\b/,
+  },
+  {
+    issue: 'cloudbase-env-id',
+    pattern: /(?:CloudBase\s*环境\s*(?:ID)?|环境\s*ID)\s*[：:]\s*[A-Za-z0-9][A-Za-z0-9_-]{5,}/i,
+  },
 ];
 
 function addIssue(issues, issue, detail) {
