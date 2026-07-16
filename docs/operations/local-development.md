@@ -2,7 +2,7 @@
 
 ## 开发
 
-环境要求：Node.js `^20.19.0` 或 `>=22.12.0`、pnpm `11.7.0`，以及首次 E2E 验收所需的 Chromium。
+环境要求：Node.js `^20.19.0` 或 `>=22.13.0`、pnpm `11.7.0`，以及首次 E2E 验收所需的 Chromium。
 
 ```bash
 pnpm install

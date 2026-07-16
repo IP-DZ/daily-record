@@ -122,7 +122,12 @@ describe('deployment and build artifact safety', () => {
 
   it('keeps GitHub CI aligned with the local release gates that can run without real CloudBase secrets', () => {
     const ciWorkflow = readProjectFile('.github/workflows/ci.yml');
-    const rootPackage = readJsonProjectFile<{ devDependencies?: Record<string, unknown> }>('package.json');
+    const rootPackage = readJsonProjectFile<{
+      devDependencies?: Record<string, unknown>;
+      engines?: Record<string, unknown>;
+    }>('package.json');
+    const readme = readProjectFile('README.md');
+    const localDevelopment = readProjectFile('docs/operations/local-development.md');
 
     for (const requiredTerm of [
       'pnpm/action-setup',
@@ -149,6 +154,13 @@ describe('deployment and build artifact safety', () => {
     expect(rootPackage.devDependencies).toEqual(expect.objectContaining({
       '@types/node': expect.any(String),
     }));
+    expect(rootPackage.engines).toEqual(expect.objectContaining({
+      node: '^20.19.0 || >=22.13.0',
+    }));
+    for (const document of [readme, localDevelopment]) {
+      expect(document).toContain('Node.js `^20.19.0` 或 `>=22.13.0`');
+      expect(document).not.toContain('>=22.12.0');
+    }
   });
 
   it('keeps the meal photo cloud function as a buildable deployment package', () => {
