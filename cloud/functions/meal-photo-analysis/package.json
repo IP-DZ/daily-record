@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "build": "vite build --config vite.config.ts",
-    "smoke": "node --input-type=module -e \"const mod = await import('./dist/index.js'); if (typeof mod.main !== 'function' || typeof mod.default !== 'function') throw new Error('mealPhotoAnalysis dist entrypoint is invalid');\"",
+    "smoke": "node --input-type=module -e \"const pkg = await import('./dist/package.json', { with: { type: 'json' } }); if (pkg.default.type !== 'module' || pkg.default.main !== 'index.js') throw new Error('mealPhotoAnalysis dist package metadata is invalid'); const mod = await import('./dist/index.js'); if (typeof mod.main !== 'function' || typeof mod.default !== 'function') throw new Error('mealPhotoAnalysis dist entrypoint is invalid');\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run src"
   },

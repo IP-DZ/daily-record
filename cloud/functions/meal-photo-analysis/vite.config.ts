@@ -1,7 +1,25 @@
+import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, type PluginOption } from 'vite';
+
+function writeDeploymentPackageMetadata(): PluginOption {
+  return {
+    name: 'write-deployment-package-metadata',
+    apply: 'build',
+    closeBundle() {
+      writeFileSync(
+        resolve(__dirname, 'dist/package.json'),
+        `${JSON.stringify({
+          type: 'module',
+          main: 'index.js',
+        }, null, 2)}\n`,
+      );
+    },
+  };
+}
 
 export default defineConfig({
+  plugins: [writeDeploymentPackageMetadata()],
   build: {
     emptyOutDir: true,
     lib: {

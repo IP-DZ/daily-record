@@ -114,7 +114,7 @@ describe('deployment and build artifact safety', () => {
     expect(functionPackage.files).toEqual(['dist']);
     expect(functionPackage.scripts).toEqual(expect.objectContaining({
       build: 'vite build --config vite.config.ts',
-      smoke: expect.stringContaining('dist/index.js'),
+      smoke: expect.stringContaining('dist/package.json'),
       typecheck: 'tsc -p tsconfig.json --noEmit',
       test: 'vitest run src',
     }));
@@ -128,7 +128,11 @@ describe('deployment and build artifact safety', () => {
       outDir: 'dist',
     }));
     expect(tsconfig.include).toEqual(['src/**/*.ts']);
-    expect(readProjectFile('cloud/functions/meal-photo-analysis/vite.config.ts')).toContain('src/index.ts');
+    const functionViteConfig = readProjectFile('cloud/functions/meal-photo-analysis/vite.config.ts');
+    expect(functionViteConfig).toContain('src/index.ts');
+    expect(functionViteConfig).toContain('package.json');
+    expect(functionViteConfig).toContain("type: 'module'");
+    expect(functionViteConfig).toContain("main: 'index.js'");
     expect(readProjectFile('cloud/functions/meal-photo-analysis/src/index.ts')).toContain('export async function main');
     expect(readProjectFile('docs/operations/deployment.md')).toContain('pnpm test:cloud-functions');
     expect(readProjectFile('docs/operations/deployment.md')).toContain('pnpm smoke:cloud-functions');
