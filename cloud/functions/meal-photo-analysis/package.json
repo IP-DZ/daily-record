@@ -12,6 +12,7 @@
     "test": "vitest run src"
   },
   "dependencies": {
+    "@cloudbase/js-sdk": "3.6.2",
     "@daily-record/contracts": "workspace:*",
     "zod": "^4.4.3"
   }

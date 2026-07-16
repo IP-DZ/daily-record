@@ -28,9 +28,12 @@ pnpm test:e2e --project=mobile-chromium --reporter=line
 
 ## CloudBase 云函数与模型变量
 
-`cloud/functions/meal-photo-analysis` 提供可部署入口和可注入 runtime factory。部署 `mealPhotoAnalysis` 云函数前，先执行 `pnpm typecheck:cloud-functions` 和 `pnpm build:cloud-functions`，确认 `cloud/functions/meal-photo-analysis/dist/index.js` 已生成；部署包只需要该函数目录的 `dist/` 和函数级服务端配置。部署时必须在 CloudBase 服务端环境或函数级 secret 中配置以下变量；这些变量不得写入 `.env.example`、浏览器代码、构建日志、Playwright trace、截图或提交历史。
+`cloud/functions/meal-photo-analysis` 提供可部署 `main` 入口和可注入 runtime factory。部署 `mealPhotoAnalysis` 云函数前，先执行 `pnpm typecheck:cloud-functions` 和 `pnpm build:cloud-functions`，确认 `cloud/functions/meal-photo-analysis/dist/index.js` 已生成；部署包需要包含该函数目录的整个 `dist/`（包括动态 chunk）和函数级服务端配置，入口 handler 指向 `main`。部署时必须在 CloudBase 服务端环境或函数级 secret 中配置以下变量；这些变量不得写入 `.env.example`、浏览器代码、构建日志、Playwright trace、截图或提交历史。
 
 ```bash
+CLOUDBASE_ENV_ID=<isolated-environment-id>
+CLOUDBASE_PUBLISHABLE_KEY=<publishable-key>
+CLOUDBASE_REGION=ap-shanghai
 PHOTO_MEAL_MODEL_PROVIDER=http-json
 PHOTO_MEAL_MODEL_ENDPOINT=<server-side-vision-model-endpoint>
 PHOTO_MEAL_MODEL_NAME=<vision-model-name>
@@ -42,6 +45,7 @@ PHOTO_MEAL_DAILY_LIMIT=20
 - `PHOTO_MEAL_MODEL_ENDPOINT` 必须是服务端可访问的 HTTPS 地址；大陆网络首发应优先选择大陆可访问、延迟稳定的模型服务。
 - `PHOTO_MEAL_MODEL_API_KEY` 只允许存在于云函数环境；仓库和前端构建产物只保存变量名，不保存值。
 - `PHOTO_MEAL_DAILY_LIMIT` 默认 20，合法范围 1–100；真实环境调高前应先确认模型成本和限流策略。
+- `CLOUDBASE_*` 只用于云函数初始化当前隔离环境；`CLOUDBASE_PUBLISHABLE_KEY` 是平台公开 key，不得替换成 TencentCloud SecretId / SecretKey 或数据库管理密钥。
 - 云函数存储适配器必须把图片保存到 `users/{userHash}/photo-meal/{requestHash}/photo.webp|jpg` 形式的私有对象 key；不得使用 raw 用户 ID 作为路径段，不得生成长期公开 URL，也不得把 data URL、签名 URL、模型原文响应或密钥写入日志。
 
 ## 自托管部署

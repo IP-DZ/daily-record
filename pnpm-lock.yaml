@@ -84,6 +84,9 @@ importers:
 
   cloud/functions/meal-photo-analysis:
     dependencies:
+      '@cloudbase/js-sdk':
+        specifier: 3.6.2
+        version: 3.6.2
       '@daily-record/contracts':
         specifier: workspace:*
         version: link:../../../packages/contracts

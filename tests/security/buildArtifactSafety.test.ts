@@ -46,6 +46,8 @@ describe('deployment and build artifact safety', () => {
     expect(deployment).toContain('PHOTO_MEAL_MODEL_NAME');
     expect(deployment).toContain('PHOTO_MEAL_DAILY_LIMIT');
     expect(deployment).toContain('PHOTO_MEAL_MODEL_API_KEY');
+    expect(deployment).toContain('CLOUDBASE_ENV_ID');
+    expect(deployment).toContain('CLOUDBASE_PUBLISHABLE_KEY');
     expect(deployment).toContain('真实 blocker');
     expect(deployment).toContain('cloudbase-test-environment.md');
     expect(deployment).toContain('local-development.md');
@@ -77,6 +79,8 @@ describe('deployment and build artifact safety', () => {
       'mealPhotoAnalysis',
       'PHOTO_MEAL_MODEL_PROVIDER',
       'PHOTO_MEAL_MODEL_API_KEY',
+      'CLOUDBASE_ENV_ID',
+      'CLOUDBASE_PUBLISHABLE_KEY',
       'CLOUDBASE_MANUAL_E2E=1',
       '中国大陆网络 smoke',
     ]) {
@@ -112,6 +116,7 @@ describe('deployment and build artifact safety', () => {
       test: 'vitest run src',
     }));
     expect(functionPackage.dependencies).toEqual(expect.objectContaining({
+      '@cloudbase/js-sdk': '3.6.2',
       '@daily-record/contracts': 'workspace:*',
       zod: expect.any(String),
     }));
@@ -121,6 +126,7 @@ describe('deployment and build artifact safety', () => {
     }));
     expect(tsconfig.include).toEqual(['src/**/*.ts']);
     expect(readProjectFile('cloud/functions/meal-photo-analysis/vite.config.ts')).toContain('src/index.ts');
+    expect(readProjectFile('cloud/functions/meal-photo-analysis/src/index.ts')).toContain('export async function main');
   });
 
   it('keeps the service worker away from user APIs and test-platform endpoints', () => {

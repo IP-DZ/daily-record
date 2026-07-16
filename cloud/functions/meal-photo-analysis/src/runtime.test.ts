@@ -8,8 +8,10 @@ import {
   loadMealPhotoRuntimeConfig,
 } from './runtime';
 import {
+  createCloudBaseMealPhotoRuntimeDependencies,
   createMealPhotoAnalysisCloudFunction as createEntrypointFunction,
   createMealPhotoAnalysisHandler as createEntrypointHandler,
+  main as mealPhotoAnalysisMain,
 } from './index';
 
 const photo: PreparedMealPhoto = {
@@ -54,6 +56,48 @@ describe('meal photo cloud function runtime adapters', () => {
   it('exposes a package entrypoint for CloudBase deployment wiring', () => {
     expect(createEntrypointFunction).toBeTypeOf('function');
     expect(createEntrypointHandler).toBeTypeOf('function');
+    expect(mealPhotoAnalysisMain).toBeTypeOf('function');
+  });
+
+  it('creates CloudBase runtime dependencies from server env without import-time side effects', () => {
+    const rdb = { rpc: vi.fn() };
+    const app = {
+      uploadFile: vi.fn(),
+      rdb: vi.fn(() => rdb),
+    };
+    const cloudbase = {
+      SYMBOL_CURRENT_ENV: Symbol.for('cloudbase-current-env'),
+      init: vi.fn(() => app),
+    };
+    const fetch = vi.fn();
+
+    const dependencies = createCloudBaseMealPhotoRuntimeDependencies({
+      cloudbase,
+      env: {
+        CLOUDBASE_ENV_ID: 'daily-record-test',
+        CLOUDBASE_PUBLISHABLE_KEY: 'publishable-key',
+        CLOUDBASE_REGION: 'ap-shanghai',
+        PHOTO_MEAL_MODEL_PROVIDER: 'http-json',
+        PHOTO_MEAL_MODEL_ENDPOINT: 'https://model.example.test/v1/chat/completions',
+        PHOTO_MEAL_MODEL_API_KEY: 'server-only-secret',
+        PHOTO_MEAL_MODEL_NAME: 'vision-food-v1',
+      },
+      fetch,
+      logger: console,
+    });
+
+    expect(cloudbase.init).toHaveBeenCalledWith({
+      env: 'daily-record-test',
+      accessKey: 'publishable-key',
+      region: 'ap-shanghai',
+      timeout: 30_000,
+    });
+    expect(app.rdb).toHaveBeenCalledTimes(1);
+    expect(dependencies.env.PHOTO_MEAL_MODEL_API_KEY).toBe('server-only-secret');
+    expect(dependencies.fetch).toBe(fetch);
+    expect(dependencies.storage).toBe(app);
+    expect(dependencies.rdb).toBe(rdb);
+    expect(dependencies.logger).toBe(console);
   });
 
   it('loads only server-side model configuration and validates daily limits', () => {

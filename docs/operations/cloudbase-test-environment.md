@@ -26,6 +26,9 @@ export VITE_CLOUDBASE_REGION='ap-shanghai'
 4. 部署 `mealPhotoAnalysis` 云函数，并在函数级或服务端环境中配置以下变量。只记录变量名和是否配置完成，不记录值：
 
    ```bash
+   CLOUDBASE_ENV_ID='<isolated-environment-id>'
+   CLOUDBASE_PUBLISHABLE_KEY='<publishable-key>'
+   CLOUDBASE_REGION='ap-shanghai'
    PHOTO_MEAL_MODEL_PROVIDER=http-json
    PHOTO_MEAL_MODEL_ENDPOINT='<server-side-vision-model-endpoint>'
    PHOTO_MEAL_MODEL_NAME='<vision-model-name>'
@@ -33,7 +36,7 @@ export VITE_CLOUDBASE_REGION='ap-shanghai'
    PHOTO_MEAL_DAILY_LIMIT=20
    ```
 
-   `PHOTO_MEAL_MODEL_API_KEY` 不得进入 `.env.example`、前端构建、浏览器 storage、日志或测试产物。模型服务应优先选择中国大陆网络可稳定访问的 endpoint；实际 provider 返回值必须经云函数 schema 校验，失败时只返回稳定错误。
+   `CLOUDBASE_PUBLISHABLE_KEY` 是 CloudBase 公开 key，只用于初始化当前隔离环境；不得把 TencentCloud SecretId / SecretKey、数据库管理密钥或其他服务端凭据填到这里。`PHOTO_MEAL_MODEL_API_KEY` 不得进入 `.env.example`、前端构建、浏览器 storage、日志或测试产物。模型服务应优先选择中国大陆网络可稳定访问的 endpoint；实际 provider 返回值必须经云函数 schema 校验，失败时只返回稳定错误。
 5. 准备两个仅用于此环境的邮箱 A/B，并在每轮 smoke 前清空这两个账号的测试业务数据，包括 profile/goal、meals、weight、workouts、ai_analyses 和私有测试图片对象。邮箱和实时 OTP 只在 headed 浏览器中手动输入，不设置为环境变量。
 6. 执行默认自动证据：
 
