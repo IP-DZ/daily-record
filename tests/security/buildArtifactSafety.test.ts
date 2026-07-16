@@ -124,6 +124,11 @@ describe('deployment and build artifact safety', () => {
     expect(smokeScript).toContain('CLOUDBASE_ENV_ID');
     expect(smokeScript).toContain('createCloudBaseObjectStorageUploadClient');
     expect(smokeScript).toContain('contentType');
+    expect(smokeScript).toContain('forbiddenDistMarkers');
+    expect(smokeScript).toContain('@cloudbase\\/js-sdk');
+    expect(smokeScript).toContain('window');
+    expect(smokeScript).toContain('document');
+    expect(smokeScript).toContain('model.example.invalid');
     expect(smokeScript).not.toContain('server-only-secret');
     expect(functionPackage.dependencies).toEqual(expect.objectContaining({
       '@cloudbase/node-sdk': '3.18.3',

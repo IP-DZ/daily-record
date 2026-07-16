@@ -52,7 +52,7 @@ pnpm_config_verify_deps_before_run=warn pnpm vitest run tests/security/buildArti
 pnpm_config_verify_deps_before_run=warn pnpm test:e2e --project=mobile-chromium --reporter=line
 ```
 
-最近证据已写回 Anvil 计划：49 个 Vitest 文件通过（443 passed），production build 通过，云函数 package test/typecheck/build/smoke 通过并生成 `dist/package.json` ESM + `@cloudbase/node-sdk` 元数据；云函数已用显式对象存储 adapter 适配 Node SDK `uploadFile({ cloudPath, fileContent })` 调用，dist smoke 会实际验证 adapter 不透传 `contentType`，构建产物安全扫描 6/6，通过移动端 E2E 8 passed / 1 real CloudBase manual skipped。
+最近证据已写回 Anvil 计划：49 个 Vitest 文件通过（443 passed），production build 通过，云函数 package test/typecheck/build/smoke 通过并生成 `dist/package.json` ESM + `@cloudbase/node-sdk` 元数据；云函数已用显式对象存储 adapter 适配 Node SDK `uploadFile({ cloudPath, fileContent })` 调用，dist smoke 会实际验证 adapter 不透传 `contentType`，并扫描云函数部署包避免浏览器 SDK、测试标记或 secret-like 字符串混入，构建产物安全扫描 6/6，通过移动端 E2E 8 passed / 1 real CloudBase manual skipped。
 
 ## 技术栈
 
